@@ -1,0 +1,17 @@
+{
+  "name": "sfk_fakturor",
+  "version": "1.0.0",
+  "description": "Start with 'npm start'",
+  "author": "",
+  "main": "sfk_fakturor.js",
+  "dependencies": {
+    "dotenv": "^8.2.0",
+    "puppeteer-core": "^1.20.0",
+    "yargs": "^14.2.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "start": "node sfk_fakturor.js"
+  },
+  "license": "GPL-3.0-only"
+}
