@@ -25,16 +25,34 @@ PersonPassword=<Password>
 
 ## Start
 
-### Updating invoices
+### Update invoices
 ```bash
 	node update_invoices.js <args>
 	node update_invoices.js --help
+
+	# Example
+	node update_invoices.js -b 751 >> report.txt
+	node update_invoices.js -b 751 -t >> only_testing.txt
+	node update_invoices.js -b 751 -t -c3 >> only_testing_a_few.txt
 ```
 
-### Invoices overview
+### Invoices overview/comparison
+(To create simple text-files that can be compared)
 ```bash
 	node compare_invoices.js <args>
 	node compare_invoices.js --help
+
+	# To extract comparions
+	node compare_invoices.js -b 581 >> report_581.txt
+	node compare_invoices.js -b 750 >> report_750.txt
+
+	# Other example
+	node compare_invoices.js -b 444 -s false -c 3 >> report_444.txt
+	node compare_invoices.js -b 555 -s false -c 3 >> report_555.txt
+
+	# Now compare
+	vimdiff report_581.txt report_750.txt
+	vimdiff report_444.txt report_555.txt
 ```
 
 ## Examples
@@ -46,16 +64,51 @@ To be used in the web browser
 	// Log event text and fee
 	window.model.items.forEach((el, idx) => {console.log(el.text + " " + el.fee)})
 ```
+
+To be executed in the browser console (typically Option + CMD + I -> Console)
+```js
+	// Get names for invoice batch
+	s=""; document.querySelectorAll("#invoices tbody tr").forEach((item) => { s += item.querySelector("td").innerText + "\n" }); console.log(s)
+
+	// For already processed invoices
+	s=""; document.querySelectorAll("#invoices tbody tr").forEach((item) => { s += item.querySelector("td:nth-child(2)").innerText + "\n" }); console.log(s)
+
+	// Calculated sum to pay ("Att betala" column)
+	s=0;document.querySelectorAll("input.amountInput").forEach(function(item) {if(!isNaN(parseFloat(item.value))) {s += parseFloat(item.value)}}); console.log(s)
+
+	// Calculated sum of amount ("Avg" column)
+	s=0;document.querySelectorAll("td.feeText[data-bind='text: fee']").forEach(function(item) {if(!isNaN(parseFloat(item.innerText))) {s += parseFloat(item.innerText)}}); console.log(s)
+```
+
+To retreive event model via browser console for a person
+```js
+var x = function() {
+
+let items = window.model.items
+let len = items.length
+let s=""
+for (var i = 0; i < len; i++) {
+     s+= items[i].text + ". Amount: " + items[i].amount + ", fee: " + items[i].fee + ", lateFee: " + items[i].lateFee + ", status: " + items[i].status + "\n"
+}
+console.log(s)
+}
+x()
+```
  
 ### Bash scripts
+Various script to verify
 
 ```bash
 	# Return sorted and unique event names
-	grep '^\- ' result.log | cut -d ':' -f1 | sed 's/^- //' | sort | uniq 
+	grep '^\- ' result.txt | cut -d ':' -f1 | sed 's/^- //' | sort | uniq 
 ```
 ```bash
 	# Return events matching "stafett"
-	grep '^\- ' result.log | cut -d ':' -f1 | sed 's/^- //' | grep -i 'stafett'
+	grep '^\- ' result.txt | cut -d ':' -f1 | sed 's/^- //' | grep -i 'stafett'
+```
+```bash
+	# Return events without Fakturanummer (differs between executions)
+	cat result.txt | sed 's/Fakturanummer .* --- /Fakturanummer xyz --- /'  
 ```
 
 ### Coding
@@ -69,17 +122,22 @@ To be used in the web browser
 
 För medlem som deltar aktivt i klubbens arbete som funktionär vid arrangemang, ledare eller på annat sätt bidrar till klubben sponsrar Sjövalla FK individuellt tävlande enligt nedanstående regler:
 
-- Om ok -> 40% rabatt
-- Om <21 år 
-	- Om SM -> 100% rabatt
-	- Om mästerskap -> 100% rabatt
-- Om stafett -> 100%
-- Varje rad
-	- Inte "punch card" och inte "hyrbricka"
-	- Inte om "ej start"
-	- Ej O-Ringen (inte säker dessa äe med på listorna)
-- Räkna bort eventuell efteranälningskostnad
+### Regler i detalj
 
+- Ingen subvention för (oavsett ålder)
+	- "hyrbricka" eller "punch card"
+	- Om "ej start"
+	- Ej O-Ringen (inte säker dessa är med på listorna)
+	- Räkna bort eventuell efteranälningsavgift från subvention
+	- All händelser som inte startar med "Anmälan för <person>" (ex: "Camping")
+- Om <21 år 
+	- Om SM 			-> 100% rabatt
+	- Om mästerskap 	-> 100% rabatt
+- Specialfall
+	- Om "stafett" 		-> 100% (oavsett ålder) 
+	- Om "vårserien" 	-> 100% (oavsett ålder) 
+	- Om "veteran" 		-> 100% (då dessa betalas kontant på plats, oavsett ålder)
+- Övriga tävlingar 		-> 40% rabatt (oavsett ålder)
 
 
 

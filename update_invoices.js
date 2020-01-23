@@ -184,7 +184,6 @@ const text_automated = "Automatiserad uppdatering";
         .map((row) => ({
           debug: ((row, delta) => {
             //console.log("s")
-            console.log("--- <> ---")
             console.log("delta: " + delta)
             console.log(row.getAttribute("data-payment-status"))
             console.log(row.querySelector('td:nth-child(' + (1+delta) + ') a').innerText)
@@ -241,9 +240,7 @@ const text_automated = "Automatiserad uppdatering";
         helper.log(("-[+]- Fakturanummer " + invoiceItemById.invoiceNumber + " --- [" + (i+1) +  "/" + l +  "] ").padEnd(120,"-"))
         helper.log(invoiceItemById.name + ", " + invoiceItemById.age + " år, " + invoiceItemById.email)
         helper.log(invoiceItemById.href)
-        let alreadyProcessed = invoiceItemById.paymentStatus == "InvoiceSent" || invoiceItemById.paymentStatus == "InvoicePaid" /*|| jsmodel.items.some((item) => {
-          return item.text.includes(text_discount)
-        })*/
+        let alreadyProcessed = invoiceItemById.paymentStatus == "InvoiceSent" || invoiceItemById.paymentStatus == "InvoicePaid" 
         if(alreadyProcessed) {
           helper.log(" Redan behandlad -".padStart(120,"-"))
 
@@ -254,9 +251,14 @@ const text_automated = "Automatiserad uppdatering";
            
         } else {
 
+
+          // TODO: Logga allt i rapporten - då Eventor verkar ändra sina uppgifter över tid.
+
           // Due to a "bug" regarding events overlaping multiple days, these events repeat for each day, multiplying the invoice cost
           // Solution: 
           // - Test if multiple days exists. If so -> remove duplicated rows and keep only one row
+          // TODO: Check amount > 200 kr -> bug is still there...
+          // Eventor might fix this bug
 
           //let duplicatedRows = [] // Array with indexes of any duplicated rows to remove
           let lastObject = {text: "", amount: -1}
@@ -264,16 +266,12 @@ const text_automated = "Automatiserad uppdatering";
           for (index = 0; index < len; index++) {
             let item = jsmodel.items[index]
             if(lastObject.text == item.text /*&& lastObject.amount == item.amount*/) {
-              //duplicatedRows.push(index) // TODO: Remove?
               helper.debug("[!] Found duplicate: " + item.text + ", " + item.id)
-              //helper.debug("index " + index)
 
               // Set amount to 0, both in model and on page
-              //await page.screenshot({path: index + "-before-remove-row.png"})
               jsmodel.items[index].amount = 0
               jsmodel.items[index].fee = 0
               jsmodel.items[index].lateFee = 0
-              //helper.debug("0 for item " + jsmodel.items[index].text + ", " + jsmodel.items[index].fee)
               await page.evaluate((text, index) => {
 
                 let dataItem = document.querySelector("#items tr:nth-child(" + index + ") input.textInput")
@@ -284,18 +282,18 @@ const text_automated = "Automatiserad uppdatering";
                   window.ko.dataFor(dataItem).lateFee = 0 // Reduce amount to 0
                 }
               }, item.text, (index+1)) // JS start at 0, CSS at 1 => add 1
-              //await page.screenshot({path: index + "-after-remove-row.png"})
             }     
             // Store for next item verification
             lastObject.text = item.text
-            lastObject.amount = parseInt(item.amount) || 0
+            lastObject.amount = parseFloat((item.amount+"").replace(",",".")) || 0
           }
 
           // Decide discount status for each row
           let discountInfo = []
           let discountRowIdx = -1
           jsmodel.items.forEach(function(item, index, array) {
-            discountInfo[index] = rules.getDiscountStatus(item.text, invoiceItemById.age, item.fee, item.lateFee, item.status)
+            //discountInfo[index] = rules.getDiscountStatus(item.text, invoiceItemById.age, item.fee, item.lateFee, item.status)
+            discountInfo[index] = rules.getDiscountStatus(item.text, invoiceItemById.age, item.amount, item.lateFee, item.status)
             //console.log("row: " + item.text)
             //console.log("test: " + (item.text == text_discount))
             if(item.text == text_discount) {
@@ -323,10 +321,14 @@ const text_automated = "Automatiserad uppdatering";
           // - Add note with details for each row
           // - Log info 
 
-          let totalAmount = discountInfo.reduce((total, item) => {return total + (parseInt(item.fee) || 0)}, 0)
-          let totalDiscount = discountInfo.reduce((total, item) => {return total + parseInt(item.discountAmount)}, 0)
+          let totalAmount = discountInfo.reduce((total, item) => {return total + (parseFloat((item.amount+"").replace(",",".")) || 0)}, 0)
+          let totalDiscount = discountInfo.reduce((total, item) => {return total + parseFloat((item.discountAmount+"").replace(",","."))}, 0)
           helper.debug("Total amount: " + totalAmount)
           helper.debug("Total discount: " + totalDiscount)
+
+          /*if((totalAmount - totalDiscount) < 0) {
+            helper.log("[!] Högre subvention än avgift: Avg. " + totalAmount + ", subv.: " + totalDiscount + ". Diff: " + (totalAmount - totalDiscount))
+          }*/
 
           let invoiceResult = await page.evaluate((text_discount_title, text_discount, totalDiscount, totalAmount, discountInfo, discountRowQuery) => {
 
@@ -334,7 +336,7 @@ const text_automated = "Automatiserad uppdatering";
             let dataItem = document.querySelector(discountRowQuery)
 
             window.ko.dataFor(dataItem).text(text_discount) // Set text
-            window.ko.dataFor(dataItem).amount(parseInt(totalDiscount) * -1) // Set total discount
+            window.ko.dataFor(dataItem).amount(parseFloat(totalDiscount+"".replace(",",".")) * -1) // Set total discount
             
             let note = "" // Note to display on Invoice. Always all details in comparison to paperNote - that needs to fit the paper invoice
             let paperNote = "" // Shorter note on paper since not all lines can be added, for some cases
@@ -351,9 +353,9 @@ const text_automated = "Automatiserad uppdatering";
                 if(index <= 15 && (text_discount != item.invoiceNote)) {
                   paperNote += rowNote.replace(/  /g," ") + "\n" // Remove padding spaces
                 }
-                note += rowNote + " [Avg: " + (""+item.fee).padStart(3) + " kr]" 
+                note += rowNote + " [Avg.: " + (""+item.amount).replace(".5",",50").padStart(3) + " kr]" 
                 if(item.lateFee > 0) {
-                  note += " [Efteranm.: " + (""+item.lateFee).padStart(3) + " kr]" 
+                  note += " [Efteranm.: " + (""+item.lateFee).replace(".5",",50").padStart(3) + " kr]" 
                 }
                 note += "\n"
               }
@@ -363,10 +365,10 @@ const text_automated = "Automatiserad uppdatering";
               // Display additional info if all rows not in place
               paperNote += "(Alla subventioner får ej plats här men alla är inräknade i summeringen - se specifikation på nästa sida)\n"
             }
-            note += "Summa före subventioner: " + (""+totalAmount).padStart(5) + " kr\n"
-            note += "Summa subvention:        " + (""+totalDiscount).padStart(5) + " kr\n"
-            note += "Summa att betala:        " + (""+(totalAmount - totalDiscount)).padStart(5) + " kr (för aktuell faktura)\n"
-            paperNote += "Summa subventioner: " + (""+totalDiscount).padStart(5) + " kr\n"
+            paperNote += "Summa subventioner: " + (""+totalDiscount).replace(".5",",50").padStart(5) + " kr\n"
+            note += "Summa subvention:        " + (""+totalDiscount).replace(".5",",50").padStart(5) + " kr\n"
+            note += "Summa att betala: " + (""+totalAmount).replace(".5",",50").padStart(5) + " kr\n"
+            //note += "Summa att betala:        " + (""+(totalAmount - totalDiscount)).replace(".5",",50").padStart(5) + " kr (för aktuell faktura)\n"
 
             // Update note on invoice
             window.ko.dataFor(document.querySelector("#InvoiceInformation")).invoiceInformation(text_discount_title + "\n" + paperNote)
@@ -416,8 +418,8 @@ const text_automated = "Automatiserad uppdatering";
 
       } // If 
     }//) // forEach
-    helper.log("Total summa utan subventioner - för alla: " + (""+allPersonsAmount).padStart(4) + " kr")
-    helper.log("Total summa subventioner - för alla:      " + (""+allPersonsDiscount).padStart(4) + " kr")
+    helper.log("Total summa utan subventioner - för alla: " + (""+allPersonsAmount).replace(".5",",50").padStart(4) + " kr")
+    helper.log("Total summa subventioner - för alla:      " + (""+allPersonsDiscount).replace(".5",",50").padStart(4) + " kr")
     let timeDiff = helper.timediffMS(startTime)
     helper.log("Tid: " + timeDiff.m + " minuter, " + timeDiff.s + " sekunder")
     helper.log(" Slut rapport =".padStart(120,"="))

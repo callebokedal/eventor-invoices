@@ -9,9 +9,12 @@
     "puppeteer-core": "^1.20.0",
     "yargs": "^14.2.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "jasmine": "^3.5.0"
+  },
   "scripts": {
-    "start": "node sfk_fakturor.js"
+    "start": "node sfk_fakturor.js",
+    "test": "jasmine" 
   },
   "license": "GPL-3.0-only"
 }

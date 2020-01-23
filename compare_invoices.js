@@ -17,6 +17,18 @@ const argv = require('yargs')
     default: false,
     describe: 'For debug mode. Default \'false\''
   })
+  .option('short', {
+    alias: 's',
+    type: 'boolean',
+    default: true,
+    describe: 'I only first overview screen. Default \'true\''
+  })
+  .option('count', {
+    alias: 'c',
+    type: 'number',
+    default: -1,
+    describe: 'Decides how many items to operate on, and then cancelling the job'
+  })
   .demandOption(['batch_id'], 'Please provide batchid')
   .example("$0 -b 1234", "Excute script for batch id '1234'")
   //.epilogue('for more information, find our manual at http://example.com')
@@ -26,6 +38,7 @@ const argv = require('yargs')
 // Get arguments
 const batchId = argv.batch_id; // Id of Invoice batch - found on page https://eventor.orientering.se/Invoicing/PersonInvoiceBatches?organisationId=321. Hover "Redigera"
 const isDebug = argv.debug;
+const isShort = argv.short;
 let invoiceId = argv.invoice_id;
 let limit = argv.count || 0;
 let allPersonsAmount = 0; // Total amount for all persons
@@ -98,6 +111,9 @@ const page_domain = "eventor.orientering.se";
     // Goto Invoice overview page
     await page.goto(url_invoice_batch_overview + batchId); 
 
+    let title = await page.$eval("#entryOverview h3", el => el.innerText)
+    helper.log("Fakturautskick: " + title)  
+
     // ## Go to page with invoice batches ("Fakturautskick")
     const invoiceBatchOverview = await page.evaluate(() => {
 
@@ -110,23 +126,61 @@ const page_domain = "eventor.orientering.se";
       return Array.from(document.querySelectorAll('#invoices tbody tr'))
           .map(row => ({
             person: row.querySelector('td:nth-child(' + (1+delta) + ')').innerText.trim(),
+            href: row.querySelector('td:nth-child(' + (1+delta) + ') a').href,
             age: row.querySelector('td:nth-child(' + (2+delta) + ')').innerText,
             email: row.querySelector('td:nth-child(' + (3+delta) + ') img').getAttribute("title"),
-            invoiceId: row.querySelector('td:nth-child(' + (4+delta) + ')').innerText,
             status: row.querySelector('td:nth-child(' + (5+delta) + ')').innerText,
             rows: row.querySelector('td:nth-child(' + (6+delta) + ')').innerText,
-            amount: row.querySelector('td:nth-child(' + (7+delta) + ')').innerText.replace(" SEK","")
+            amount: row.querySelector('td:nth-child(' + (7+delta) + ')').innerText.replace(" SEK",""),
+            totalBatchAmount: document.querySelector('tfoot th:nth-child(' + (7+delta) + ')').innerText.replace(" SEK","")
           })
         )
     })
 
+    // Total Batch amount
+    helper.log("Belopp: " + invoiceBatchOverview[0].totalBatchAmount)
+
     // Summarize
     let timestamp = helper.timestamp();
-    helper.log("= Result [" + timestamp + "] ".padEnd(120,"="))
+    if(!isShort) {
+      helper.log("= Result [" + timestamp + "] ".padEnd(120,"="))
+    }
     const sep = " | "
     invoiceBatchOverview.forEach((item, idx, array) => {
-      helper.log(item.person.padEnd(25) + sep + item.age.padStart(2) + sep + item.email.padEnd(40) + sep + item.invoiceId.padStart(4) + sep + item.status.padEnd(20) + sep + item.rows.padStart(3) + sep + (""+item.amount).padEnd(4)) 
+      if(isShort) {
+        // More compact overview
+        helper.log(item.person.padEnd(25) + item.rows.padStart(3) + sep + (""+item.amount).padEnd(4)) 
+      } else {
+        helper.log(item.person.padEnd(25) + sep + item.age.padStart(2) + sep + item.email.padEnd(40) + sep + /*item.href.padStart(4) + sep + */ item.status.padEnd(20) + sep + item.rows.padStart(3) + sep + (""+item.amount).padEnd(4)) 
+      }
     })
+
+    if(!isShort) {
+      let batches = invoiceBatchOverview.length
+      if(limit > 0) {
+        batches = Math.min(limit, batches) 
+      }
+      for (var j = 0; j < batches; j++) {
+        //helper.log(invoiceBatchOverview[j].href)
+        await page.goto(invoiceBatchOverview[j].href)
+
+        let jsmodel = await page.evaluate(() => window.model)
+        //helper.log(jsmodel)
+        let items = jsmodel.items
+
+        let len = items.length
+        for (var i = 0; i < len; i++) {
+          //helper.log(items[i].text + ". Amount: " + items[i].amount + ", fee: " + items[i].fee + ", lateFee: " + items[i].lateFee + ", status: " + items[i].status)
+          helper.log(items[i].text + "| amount: " + items[i].amount + "| fee: " + items[i].fee + "| lateFee: " + items[i].lateFee + "| status: " + items[i].status)
+        }
+
+        await page.goBack() // Much faster than "cancel"
+        /*let [cancel] = await Promise.all([
+          page.waitForNavigation("#entryOverview"),
+          page.click("#editPersonInvoice form a")
+        ]);*/
+      } 
+    }
 
   }
   catch (e) {
