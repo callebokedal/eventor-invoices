@@ -1,0 +1,6 @@
+config.private.env
+.env
+node_modules
+info
+unversioned
+jmf
