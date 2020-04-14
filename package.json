@@ -14,7 +14,18 @@
   },
   "scripts": {
     "start": "node sfk_fakturor.js",
-    "test": "jasmine" 
+    "test": "jasmine"
   },
-  "license": "GPL-3.0-only"
+  "license": "GPL-3.0-only",
+  "directories": {
+    "lib": "lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/callebokedal/eventor-invoices.git"
+  },
+  "bugs": {
+    "url": "https://github.com/callebokedal/eventor-invoices/issues"
+  },
+  "homepage": "https://github.com/callebokedal/eventor-invoices#readme"
 }
