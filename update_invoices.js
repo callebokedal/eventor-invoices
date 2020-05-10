@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const fs = require('fs')
 require('dotenv').config()
 const puppeteer = require('puppeteer-core')
 const rules = require('./lib/rules')
@@ -56,6 +57,16 @@ const resetNote = argv.reset;
 if(test) {
   helper.log("### Test - inget sparas, endast loggning ".padEnd(120, "#"))
 }
+
+const settingsFile = '.env';
+fs.access(settingsFile, fs.constants.F_OK | fs.constants.R_OK, (err) => {
+  if (err) {
+    console.error("Settings file '.env' is missing. See Readme file");
+    process.exit(1)
+  } else {
+    console.log(`${settingsFile} exists, and it is readable`);
+  }
+});
 
 // Pages
 // ; makes difference here... why?
