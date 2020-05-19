@@ -55,6 +55,12 @@ PersonPassword=<Password>
 	vimdiff report_444.txt report_555.txt
 ```
 
+## Testning
+
+```bash
+npm test
+```
+
 ## Examples
 
 ### Browser scripts
@@ -78,6 +84,25 @@ To be executed in the browser console (typically Option + CMD + I -> Console)
 
 	// Calculated sum of amount ("Avg" column)
 	s=0;document.querySelectorAll("td.feeText[data-bind='text: fee']").forEach(function(item) {if(!isNaN(parseFloat(item.innerText))) {s += parseFloat(item.innerText)}}); console.log(s)
+
+	// document.querySelectorAll("#items td[data-bind='text: fee']").forEach(item => console.log(item.innerHTML))
+
+	1995 - 1159
+```
+
+```js
+// Calculate price for one person
+var x = function() {
+
+let items = window.model.items
+let len = items.length
+let s=0
+for (var i = 0; i < len; i++) {
+     s+= !isNaN(parseFloat(items[i].fee)) ? parseFloat(items[i].fee) : 0
+}
+console.log(s)
+}
+x()
 ```
 
 To retreive event model via browser console for a person

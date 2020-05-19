@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+//'use strict'
 const fs = require('fs')
 require('dotenv').config()
 const puppeteer = require('puppeteer-core')
@@ -79,13 +80,18 @@ const text_automated = "Automatiserad uppdatering";
 
   const startTime = new Date().getTime()
   const browser = await puppeteer.launch({
-    //headless: false,
+    headless: true,
     executablePath: '/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome' // This must match your local installation of Chrome
   });
   const page = await browser.newPage();
   //page.on('console', msg => console.log("browser: " + msg.text())); // Works but much noise
   await page.setViewport({ width: 1200, height: 800 })
-  await page.setCookie({name:"cookieconsent_status", value: "dismiss", domain: page_domain}, {name:"culture", value:"sv-SE", domain: page_domain});
+  await page.setCookie(
+    {name:"cookieconsent_status", value: "dismiss", domain: page_domain}, 
+    {name:"culture", value:"sv-SE", domain: page_domain},
+    {name:"euconsent", value: "BOznf5GOznf5GAKAhBENDKAAAAAviAAA", domain: ".eventor.orientering.se", path: "/", SameSite: "lax"},
+    {name:"leeadsAdSeenRecently", value: "true", domain: "eventor.orientering.se", path: "/", SameSite: "lax"},
+    {name:"googlepersonalization", value: "Oznf5GOznf5GAA", domain: ".eventor.orientering.se", path: "/", SameSite: "lax"});
 
   var cancel = async function(msg) {
     console.log("Cancelling - " + msg);
@@ -177,9 +183,15 @@ const text_automated = "Automatiserad uppdatering";
 
     // ## Get personal invoices
     // window.model.items.forEach((el, idx) => {console.log(el.text + " " + el.fee)})
+    
     // For debugging
-    //page.on('console', msg => console.log('PAGE LOG:', msg._text));
-    const invoiceList = await page.evaluate(() => {
+//    page.on('console', (msg) => {
+//      if(msg._type !== "error") {
+//        console.log('PAGE LOG:', msg._text)
+//      }
+//    });
+
+    let invoiceList = await page.evaluate(() => {
       // Depending on invoice status, number of columns differ between 8-9
       let delta = 0
       let cols = document.querySelectorAll("#invoices thead th").length
@@ -193,9 +205,9 @@ const text_automated = "Automatiserad uppdatering";
         .map((row) => ({
           debug: ((row, delta) => {
             //console.log("s")
-            console.log("delta: " + delta)
-            console.log(row.getAttribute("data-payment-status"))
-            console.log(row.querySelector('td:nth-child(' + (1+delta) + ') a').innerText)
+            //console.log("delta: " + delta)
+            //console.log(row.getAttribute("data-payment-status"))
+            //console.log(row.querySelector('td:nth-child(' + (1+delta) + ') a').innerText)
           })(row, delta),
           paymentStatus: row.getAttribute("data-payment-status"),
           name: row.querySelector('td:nth-child(' + (1+delta) + ') a').innerText,
@@ -220,7 +232,14 @@ const text_automated = "Automatiserad uppdatering";
     helper.log("Tidpunkt: " + timestamp);
     helper.log("Användare: " + user);
 
-    // TODO: Handle case when invoiceId is an argument...
+    
+    if(invoiceId) {
+      // Handle case when invoiceId is an argument...
+      // Reduce list to one item
+      invoiceList = new Array( invoiceList.find(function(item){return item.invoiceId == invoiceId}) );
+    }
+
+
     let l = invoiceList.length
     if(limit > 0) {
       l = Math.min(limit, invoiceList.length) 
@@ -272,7 +291,7 @@ const text_automated = "Automatiserad uppdatering";
           //let duplicatedRows = [] // Array with indexes of any duplicated rows to remove
           let lastObject = {text: "", amount: -1}
           const len = jsmodel.items.length
-          for (index = 0; index < len; index++) {
+          for (let index = 0; index < len; index++) {
             let item = jsmodel.items[index]
             if(lastObject.text == item.text /*&& lastObject.amount == item.amount*/) {
               helper.debug("[!] Found duplicate: " + item.text + ", " + item.id)
@@ -297,6 +316,10 @@ const text_automated = "Automatiserad uppdatering";
             lastObject.amount = parseFloat((item.amount+"").replace(",",".")) || 0
           }
 
+
+// Return object representing current rows discount status
+// function getDiscountStatus(rowText, age, fee, lateFee, status) {
+
           // Decide discount status for each row
           let discountInfo = []
           let discountRowIdx = -1
@@ -310,7 +333,7 @@ const text_automated = "Automatiserad uppdatering";
             }
           })
           helper.debug("discount status: ", discountInfo)
-          helper.debug("idx: " + discountRowIdx + ", ary: " + jsmodel.items.length)
+          //helper.debug("idx: " + discountRowIdx + ", ary: " + jsmodel.items.length)
 
           if(discountRowIdx < 0) {
             // No discount row yet -> add
@@ -346,10 +369,20 @@ const text_automated = "Automatiserad uppdatering";
 
             window.ko.dataFor(dataItem).text(text_discount) // Set text
             window.ko.dataFor(dataItem).amount(parseFloat(totalDiscount+"".replace(",",".")) * -1) // Set total discount
+
+            //console.log("discountInfo:")
+            //console.dir(JSON.stringify(discountInfo))
             
             let note = "" // Note to display on Invoice. Always all details in comparison to paperNote - that needs to fit the paper invoice
             let paperNote = "" // Shorter note on paper since not all lines can be added, for some cases
             discountInfo.forEach(function(item, index) {
+
+              if(index == 0) {
+                note += "# Aktivitet".padEnd(54) + "Subvention".padEnd(14) + "Avgift\n"
+              }
+
+              // Ex: {"valid":true,"fee":20,"lateFee":0,"discountAmount":8,"discountPercent":40,"invoiceNote":"GOFs Sommarserie Etapp 2","status":""}
+
               // Skip the row with discount amount on it
               if(text_discount != item.invoiceNote) { 
                 let rowNote = "- " + (item.invoiceNote.trim() + ": ").padEnd(50) + (""+item.discountAmount).padStart(4) + (" kr (" + item.discountPercent + "%)").padEnd(11)
@@ -363,6 +396,7 @@ const text_automated = "Automatiserad uppdatering";
                   paperNote += rowNote.replace(/  /g," ") + "\n" // Remove padding spaces
                 }
                 note += rowNote + " [Avg.: " + (""+item.amount).replace(".5",",50").padStart(3) + " kr]" 
+                //note += rowNote + " [Avg.: " + (""+item.fee).replace(".5",",50").padStart(3) + " kr]" 
                 if(item.lateFee > 0) {
                   note += " [Efteranm.: " + (""+item.lateFee).replace(".5",",50").padStart(3) + " kr]" 
                 }
@@ -376,7 +410,12 @@ const text_automated = "Automatiserad uppdatering";
             }
             paperNote += "Summa subventioner: " + (""+totalDiscount).replace(".5",",50").padStart(5) + " kr\n"
             note += "Summa subvention:        " + (""+totalDiscount).replace(".5",",50").padStart(5) + " kr\n"
-            note += "Summa att betala: " + (""+totalAmount).replace(".5",",50").padStart(5) + " kr\n"
+            // 2020-05-17 Comment out
+            //note += "Summa att betala: " + (""+totalAmount).replace(".5",",50").padStart(5) + " kr\n"
+
+            // 2020-05-19
+            note += "Summa att betala: " + window.ko.dataFor(document.querySelector("#InvoiceInformation")).amountString() + "\n"
+
             //note += "Summa att betala:        " + (""+(totalAmount - totalDiscount)).replace(".5",",50").padStart(5) + " kr (för aktuell faktura)\n"
 
             // Update note on invoice
