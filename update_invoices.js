@@ -232,11 +232,16 @@ const text_automated = "Automatiserad uppdatering";
     helper.log("Tidpunkt: " + timestamp);
     helper.log("Användare: " + user);
 
-    
+    helper.log("invoiceId: " + invoiceId + ", " + invoiceList.length)
+    //helper.log(JSON.stringify(invoiceList))
     if(invoiceId) {
       // Handle case when invoiceId is an argument...
       // Reduce list to one item
+      helper.log(invoiceList.find((item) => {return item.invoiceId == invoiceId}))
+
       invoiceList = new Array( invoiceList.find(function(item){return item.invoiceId == invoiceId}) );
+      console.log("invoiceList")
+      console.log(invoiceList)
     }
 
 
