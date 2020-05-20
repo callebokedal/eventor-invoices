@@ -239,7 +239,7 @@ const text_automated = "Automatiserad uppdatering";
       // Reduce list to one item
       helper.log(invoiceList.find((item) => {return item.invoiceId == invoiceId}))
 
-      invoiceList = new Array( invoiceList.find(function(item){return item.invoiceId == invoiceId}) );
+      invoiceList = new Array( invoiceList.find(function(item){return item.invoiceId == invoiceId}) || [] );
       console.log("invoiceList")
       console.log(invoiceList)
     }

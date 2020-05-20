@@ -29,6 +29,14 @@ describe("100% rabatt för", function() {
 		expect(rules.getDiscountStatus("Anmälan för Leif Orienterare i Vårserie - H12", 12, 100, 50, ""))
 		.toEqual({valid: true, amount: 100, lateFee: 50, discountAmount: 50, discountPercent: 100, invoiceNote: "Vårserie", status: ""});
 	});
+	it("Sommarserie", function() {
+		expect(rules.getDiscountStatus("Anmälan för Leif Orienterare i Sommarserie - H12", 12, 100, 0, ""))
+		.toEqual({valid: true, amount: 100, lateFee: 0, discountAmount: 100, discountPercent: 100, invoiceNote: "Sommarserie", status: ""});
+	});
+	it("Sommarserie och efteranmälan", function() {
+		expect(rules.getDiscountStatus("Anmälan för Leif Orienterare i Sommarserie - H12", 12, 100, 50, ""))
+		.toEqual({valid: true, amount: 100, lateFee: 50, discountAmount: 50, discountPercent: 100, invoiceNote: "Sommarserie", status: ""});
+	});
 	it("DM-tävling (ungdom)", function() {
 		expect(rules.getDiscountStatus("Anmälan för Leif Orienterare i Partilletrippeln, natt (med DM, natt, Göteborg) - D16", 18, 80, 0, ""))
 		.toEqual({valid: true, amount: 80, lateFee: 0, discountAmount: 80, discountPercent: 100, invoiceNote: "Partilletrippeln, natt (med DM, natt, Göteborg)", status: ""});
