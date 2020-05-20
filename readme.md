@@ -131,10 +131,13 @@ Various script to verify
 	# Return events matching "stafett"
 	grep '^\- ' result.txt | cut -d ':' -f1 | sed 's/^- //' | grep -i 'stafett'
 ```
+
 ```bash
-	# Return events without Fakturanummer (differs between executions)
-	cat result.txt | sed 's/Fakturanummer .* --- /Fakturanummer xyz --- /'  
+	# Get e-mail addresses
+	grep "@" reports/report_808.txt | cut -d',' -f1,3 | sort
 ```
+
+
 
 ### Coding
 
