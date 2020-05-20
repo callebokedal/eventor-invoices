@@ -80,7 +80,7 @@ const text_automated = "Automatiserad uppdatering";
 
   const startTime = new Date().getTime()
   const browser = await puppeteer.launch({
-    headless: true,
+    //headless: false,
     executablePath: '/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome' // This must match your local installation of Chrome
   });
   const page = await browser.newPage();
@@ -232,16 +232,22 @@ const text_automated = "Automatiserad uppdatering";
     helper.log("Tidpunkt: " + timestamp);
     helper.log("Användare: " + user);
 
-    helper.log("invoiceId: " + invoiceId + ", " + invoiceList.length)
+    //helper.log("invoiceId: " + invoiceId + ", " + invoiceList.length)
     //helper.log(JSON.stringify(invoiceList))
     if(invoiceId) {
       // Handle case when invoiceId is an argument...
-      // Reduce list to one item
-      helper.log(invoiceList.find((item) => {return item.invoiceId == invoiceId}))
+      let invoice = invoiceList.find((item) => {return item.invoiceId == invoiceId})
+      //helper.log(invoice)
 
-      invoiceList = new Array( invoiceList.find(function(item){return item.invoiceId == invoiceId}) || [] );
-      console.log("invoiceList")
-      console.log(invoiceList)
+      if(invoice === undefined) {
+        console.log("Invoice with id '" + invoiceId + "' not found!")
+        invoiceList = []
+      } else {
+        // Reduce list to one item
+        invoiceList = new Array( invoice )
+        console.log("Invoice with id '" + invoiceId + "' found!")
+      }
+
     }
 
 
