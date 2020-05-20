@@ -88,10 +88,7 @@ const text_automated = "Automatiserad uppdatering";
   await page.setViewport({ width: 1200, height: 800 })
   await page.setCookie(
     {name:"cookieconsent_status", value: "dismiss", domain: page_domain}, 
-    {name:"culture", value:"sv-SE", domain: page_domain},
-    {name:"euconsent", value: "BOznf5GOznf5GAKAhBENDKAAAAAviAAA", domain: ".eventor.orientering.se", path: "/", SameSite: "lax"},
-    {name:"leeadsAdSeenRecently", value: "true", domain: "eventor.orientering.se", path: "/", SameSite: "lax"},
-    {name:"googlepersonalization", value: "Oznf5GOznf5GAA", domain: ".eventor.orientering.se", path: "/", SameSite: "lax"});
+    {name:"culture", value:"sv-SE", domain: page_domain});
 
   var cancel = async function(msg) {
     console.log("Cancelling - " + msg);
@@ -103,11 +100,11 @@ const text_automated = "Automatiserad uppdatering";
     // Block images
     await page.setRequestInterception(true);
     page.on('request', request => {
-      if (request.resourceType() === 'image') {
+      if (request.resourceType() === 'image' || request._url.startsWith("https://quantcast.mgr.consensu.org") ) {
         request.abort();
-        //console.log("Aborted image: ", request._url)
-      } else
+      } else {
         request.continue();
+      }
     });
 
     // Login page

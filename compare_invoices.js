@@ -74,11 +74,11 @@ const page_domain = "eventor.orientering.se";
     // Block images
     await page.setRequestInterception(true);
     page.on('request', request => {
-      if (request.resourceType() === 'image') {
+      if (request.resourceType() === 'image' || request._url.startsWith("https://quantcast.mgr.consensu.org") ) {
         request.abort();
-        //console.log("Aborted image: ", request._url)
-      } else
+      } else {
         request.continue();
+      }
     });
 
     // Login page
