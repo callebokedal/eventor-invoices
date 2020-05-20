@@ -417,7 +417,7 @@ const text_automated = "Automatiserad uppdatering";
               paperNote += "(Alla subventioner får ej plats här men alla är inräknade i summeringen - se specifikation på nästa sida)\n"
             }
             paperNote += "Summa subventioner: " + (""+totalDiscount).replace(".5",",50").padStart(5) + " kr\n"
-            note += "Summa subvention:        " + (""+totalDiscount).replace(".5",",50").padStart(5) + " kr\n"
+            note += "Summa subvention: " + (""+totalDiscount).replace(".5",",50").padStart(5) + " kr\n"
             // 2020-05-17 Comment out
             //note += "Summa att betala: " + (""+totalAmount).replace(".5",",50").padStart(5) + " kr\n"
 
