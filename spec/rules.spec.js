@@ -14,12 +14,16 @@ describe("100% rabatt för", function() {
 	// rules.getDiscountStatus("<Event-text>", <ålder>, <Att betala>, <Efteranm. avg>, <status>)
 
 	it("Veterantävling", function() {
-		expect(rules.getDiscountStatus("Anmälan för Leif Orienterare i Veterantävling, sprint - H65", 67, 100, 0, ""))
-		.toEqual({valid: true, amount: 100, lateFee: 0, discountAmount: 100, discountPercent: 100, invoiceNote: "Veterantävling, sprint", status: ""});
+		expect(rules.getDiscountStatus("Anmälan för Leif Orienterare i Veterantävling, sprint - H65", 67, 100, 30, ""))
+		.toEqual({valid: true, amount: 100, lateFee: 30, discountAmount: 100, discountPercent: 100, invoiceNote: "Veterantävling, sprint", status: ""});
 	});
 	it("Veterantävling och efteranmälan", function() {
 		expect(rules.getDiscountStatus("Anmälan för Leif Orienterare i Veterantävling - H65", 67, 100, 50, ""))
 		.toEqual({valid: true, amount: 100, lateFee: 50, discountAmount: 100, discountPercent: 100, invoiceNote: "Veterantävling", status: ""});
+	});
+	it("Veterantävling med ej start", function() {
+		expect(rules.getDiscountStatus("Anmälan för Leif Orienterare i Veterantävling - H50", 50, 100, 0, "Ej start"))
+		.toEqual({valid: true, amount: 100, lateFee: 0, discountAmount: 100, discountPercent: 100, invoiceNote: "Veterantävling", status: "Ej start"});
 	});
 	it("Vårserie", function() {
 		expect(rules.getDiscountStatus("Anmälan för Leif Orienterare i Vårserie - H12", 12, 100, 0, ""))
@@ -95,10 +99,6 @@ describe("40% rabatt för", function() {
 describe("Ej rabatt för", function() {
 	// rules.getDiscountStatus("<Event-text>", <ålder>, <Att betala>, <Efteranm. avg>, <status>)
 
-	it("Veterantävling med ej start", function() {
-		expect(rules.getDiscountStatus("Anmälan för Leif Orienterare i Veterantävling - H50", 50, 100, 0, "Ej start"))
-		.toEqual({valid: false, amount: 100, lateFee: 0, discountAmount: 0, discountPercent: 0, invoiceNote: "Veterantävling", status: "Ej start"});
-	});
 	it("Vanlig tävling och efteranmälan", function() {
 		expect(rules.getDiscountStatus("Anmälan för Leif Orienterare i Partilletrippeln, sprint - H50", 52, 100, 50, ""))
 		.toEqual({valid: true, amount: 100, lateFee: 50, discountAmount: 20, discountPercent: 40, invoiceNote: "Partilletrippeln, sprint", status: ""});
@@ -106,6 +106,10 @@ describe("Ej rabatt för", function() {
 	it("Hyrbricka", function() {
 		expect(rules.getDiscountStatus("Hyrbricka för Leif Orienterare", 52, 100, 0, ""))
 		.toEqual({valid: false, amount: 100, lateFee: 0, discountAmount: 0, discountPercent: 0, invoiceNote: "Hyrbricka för Leif Orienterare", status: "Ej subvention"});
+	});
+	it("O-Ringen", function() {
+		expect(rules.getDiscountStatus("O-Ringen för Leif Orienterare", 52, 100, 0, ""))
+		.toEqual({valid: false, amount: 100, lateFee: 0, discountAmount: 0, discountPercent: 0, invoiceNote: "O-Ringen för Leif Orienterare", status: "Ej subvention"});
 	});
 });
 
