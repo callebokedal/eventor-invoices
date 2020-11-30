@@ -55,6 +55,11 @@ PersonPassword=<Password>
 	vimdiff report_444.txt report_555.txt
 ```
 
+### Reports
+```bash
+grep -e '-\[+' -e 'Summa subvention' -e 'Summa att' -e ' år, ' -e 'https://' report_809.txt | sed 's/--//g' | sed 's/-\[+\]- Fakturanummer //' | sed 's/ - \[/|/' | sed 's/\]//g'
+```
+
 ## Testning
 
 ```bash
@@ -137,7 +142,28 @@ Various script to verify
 	grep "@" reports/report_808.txt | cut -d',' -f1,3 | sort
 ```
 
+```bash
+	cat *.txt | grep -v "^Mem" | grep -v "^Email" | cut -d',' -f1-3 | sed 's/,member//' | sed 's/,owner//' | sed 's/\\(/"/' 
+	cat *.txt | grep -v "^Mem" | grep -v "^Email" | cut -d',' -f1-3 | sed 's/,member//' | sed 's/,owner//'
+```
 
+```bash
+# 2020-07-06 Check multiday events
+cat all_events.txt | grep -v -e Veteran -e 'Ej start' -e 'Ej subve' | sort -nr | uniq -c | sort | grep ' 0 kr (0%)' | grep -v -e '^   1'
+   2 Herkules Skogsdåd:                                   0 kr (0%)    
+   2 Morokulien 2-dagars:                                 0 kr (0%)    
+   3 KSK-sprinten:                                        0 kr (0%)    
+   4 O-Event, dag 3, Zoorientering:                       0 kr (0%)    
+  13 Gotland 3-dagars:                                    0 kr (0%)    
+  56 Hallands 3-dagars:                                   0 kr (0%)    
+  60 Göteborg O-meeting:                                  0 kr (0%) 
+
+## Följande blir fel
+   2 Morokulien 2-dagars:                                 0 kr (0%)    
+  13 Gotland 3-dagars:                                    0 kr (0%)    
+  56 Hallands 3-dagars:                                   0 kr (0%)    
+  60 Göteborg O-meeting:                                  0 kr (0%) 
+```
 
 ### Coding
 
@@ -174,7 +200,8 @@ Vi vill gärna att subventionen tydligt ska synas på det som faktureras ut
 -> Välj ut vilka som är sanktionerade, se nedan. Notering kommer med tydligt på fakturan
 
 ### För flerdagarsarrangemang räknas varje deltävling som en tävlingsstart. 
-Inga problem idag eftersom allt går genom Eventor
+Inga problem idag eftersom allt går genom Eventor.
+Jo, problem eftersom Eventor räknar fel ibland. Första dagen blir rätt men inte efterföljande
 
 ### Vid utebliven start erhålls ingen sponsring. 
 Syns detta i Excel utdraget från Eventor?

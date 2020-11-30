@@ -182,11 +182,11 @@ const text_automated = "Automatiserad uppdatering";
     // window.model.items.forEach((el, idx) => {console.log(el.text + " " + el.fee)})
     
     // For debugging
-//    page.on('console', (msg) => {
-//      if(msg._type !== "error") {
-//        console.log('PAGE LOG:', msg._text)
-//      }
-//    });
+    page.on('console', (msg) => {
+      if(msg._type !== "error") {
+        console.log('PAGE LOG:', msg._text)
+      }
+    });
 
     let invoiceList = await page.evaluate(() => {
       // Depending on invoice status, number of columns differ between 8-9
@@ -297,42 +297,94 @@ const text_automated = "Automatiserad uppdatering";
           // Eventor might fix this bug
 
           //let duplicatedRows = [] // Array with indexes of any duplicated rows to remove
-          let lastObject = {text: "", amount: -1}
-          const len = jsmodel.items.length
-          for (let index = 0; index < len; index++) {
-            let item = jsmodel.items[index]
-            if(lastObject.text == item.text /*&& lastObject.amount == item.amount*/) {
-              helper.debug("[!] Found duplicate: " + item.text + ", " + item.id)
+          var newFeature = false; // To be able to toggle new feature on/off. https://stackoverflow.com/questions/46524997/return-value-from-page-evaluation-puppeteer-asnyc-programming
+          // TODO: Not finished but something to work further on
+          // Sync changes made in legacy version as well -> compare and see
+          if (newFeature) {
+            let lastObject = {text: "", amount: -1}
+            const len = jsmodel.items.length
+            for (let index = 0; index < len; index++) {
+              let item = jsmodel.items[index]
+              if(lastObject.text == item.text /*&& lastObject.amount == item.amount*/) {
+                helper.log("[!] Found duplicate: " + item.text + ", " + item.id)
 
-              // Set amount to 0, both in model and on page
-              jsmodel.items[index].amount = 0
-              jsmodel.items[index].fee = 0
-              jsmodel.items[index].lateFee = 0
-              await page.evaluate((text, index) => {
+                // Set amount to 0, both in model and on page
+                jsmodel.items[index].amount = 0
+                jsmodel.items[index].fee = 0
+                jsmodel.items[index].lateFee = 0
+                var resultObj = await page.evaluate(async (text, index, sum_amount) => {
 
-                let dataItem = document.querySelector("#items tr:nth-child(" + index + ") input.textInput")
-                if(text == window.ko.dataFor(dataItem).text()) {
-                  //window.ko.dataFor(dataItem).text("Dublett: " + index) // Set text  
-                  window.ko.dataFor(dataItem).amount(0) // Reduce amount to 0
-                  window.ko.dataFor(dataItem).fee = 0 // Reduce amount to 0
-                  window.ko.dataFor(dataItem).lateFee = 0 // Reduce amount to 0
-                }
-              }, item.text, (index+1)) // JS start at 0, CSS at 1 => add 1
-            }     
-            // Store for next item verification
-            lastObject.text = item.text
-            lastObject.amount = parseFloat((item.amount+"").replace(",",".")) || 0
+                  function doStuff(sum_amount) {
+                      return new Promise((resolve, reject) => {
+                        let dataItem = document.querySelector("#items tr:nth-child(" + index + ") input.textInput")
+                        if(text == window.ko.dataFor(dataItem).text()) {
+                          //window.ko.dataFor(dataItem).text("Dublett: " + index) // Set text
+                          console.log("Found duplicate: " + window.ko.dataFor(dataItem).fee) 
+                          // Save amount sum
+                          sum_amount = sum_amount + parseFloat(window.ko.dataFor(dataItem).fee)
+                          console.log("lastObject text, amount: " + text + ", " + sum_amount)
+                          window.ko.dataFor(dataItem).amount(0) // Reduce amount to 0
+                          window.ko.dataFor(dataItem).fee = 0 // Reduce amount to 0
+                          window.ko.dataFor(dataItem).lateFee = 0 // Reduce amount to 0
+                        }
+                        // Return result
+                        resolve({test: "foo", bar:3, sum_amount: sum_amount});
+                    });
+                  }
+
+                  var returnObj = await doStuff(sum_amount);
+                  return returnObj;
+
+                }, item.text, (index+1), lastObject.amount) // JS start at 0, CSS at 1 => add 1
+
+                console.log(resultObj)
+              }
+              // Store for next item verification
+              lastObject.text = item.text
+              lastObject.amount = parseFloat((item.amount+"").replace(",",".")) || 0
+            }
+          } else {
+            // Legacy code
+            let lastObject = {text: "", amount: -1}
+            const len = jsmodel.items.length
+            for (let index = 0; index < len; index++) {
+              let item = jsmodel.items[index]
+              /*
+              2020-12-01 Disable since it is not necessary any longer? See GO-ringen 2020
+  
+              if(lastObject.text == item.text) {
+                helper.log("[!] Found duplicate: " + item.text + ", " + item.id)
+
+                // Set amount to 0, both in model and on page
+                jsmodel.items[index].amount = 0
+                jsmodel.items[index].fee = 0
+                jsmodel.items[index].lateFee = 0
+                await page.evaluate((text, index) => {
+                  let dataItem = document.querySelector("#items tr:nth-child(" + index + ") input.textInput")
+                  if(text == window.ko.dataFor(dataItem).text()) {
+                    //window.ko.dataFor(dataItem).text("Dublett: " + index) // Set text
+                    window.ko.dataFor(dataItem).amount(0) // Reduce amount to 0
+                    window.ko.dataFor(dataItem).fee = 0 // Reduce amount to 0
+                    window.ko.dataFor(dataItem).lateFee = 0 // Reduce amount to 0
+                  }
+                }, item.text, (index+1)) // JS start at 0, CSS at 1 => add 1
+              }
+              // Store for next item verification
+              lastObject.text = item.text
+              lastObject.amount = parseFloat((item.amount+"").replace(",",".")) || 0*/
+            }
           }
 
 
-// Return object representing current rows discount status
-// function getDiscountStatus(rowText, age, fee, lateFee, status) {
+          // Return object representing current rows discount status
+          // function getDiscountStatus(rowText, age, fee, lateFee, status) {
 
           // Decide discount status for each row
           let discountInfo = []
           let discountRowIdx = -1
           jsmodel.items.forEach(function(item, index, array) {
             //discountInfo[index] = rules.getDiscountStatus(item.text, invoiceItemById.age, item.fee, item.lateFee, item.status)
+            helper.debug("Count discount: " + item.text + ", " + invoiceItemById.age + " år, Att betela: " + item.amount + ", Avgift: " + item.lateFee + ", status: " + item.status)
             discountInfo[index] = rules.getDiscountStatus(item.text, invoiceItemById.age, item.amount, item.lateFee, item.status)
             //console.log("row: " + item.text)
             //console.log("test: " + (item.text == text_discount))
@@ -362,7 +414,7 @@ const text_automated = "Automatiserad uppdatering";
           // - Log info 
 
           let totalAmount = discountInfo.reduce((total, item) => {return total + (parseFloat((item.amount+"").replace(",",".")) || 0)}, 0)
-          let totalDiscount = discountInfo.reduce((total, item) => {return total + parseFloat((item.discountAmount+"").replace(",","."))}, 0)
+          let totalDiscount = discountInfo.reduce((total, item) => {return total + (parseFloat((item.discountAmount+"").replace(",",".")))}, 0)
           helper.debug("Total amount: " + totalAmount)
           helper.debug("Total discount: " + totalDiscount)
 
