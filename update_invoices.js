@@ -193,7 +193,7 @@ const text_automated = "Automatiserad uppdatering";
     // For debugging
     page.on('console', (msg) => {
       if(msg._type !== "error") {
-        console.log('PAGE LOG:', msg._text)
+        //console.log('PAGE LOG:', msg._text)
       }
     });
 
