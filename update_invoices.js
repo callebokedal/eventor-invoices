@@ -401,7 +401,7 @@ const text_automated = "Automatiserad uppdatering";
               discountRowIdx = index + 1 // JS start at 0, CSS at 1 => Add 1
             }
           })
-          helper.debug("discount status: ", discountInfo)
+          //helper.debug("discount status: ", discountInfo)
           //helper.debug("idx: " + discountRowIdx + ", ary: " + jsmodel.items.length)
 
           if(discountRowIdx < 0) {
