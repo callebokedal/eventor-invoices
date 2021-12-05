@@ -63,7 +63,7 @@ const settingsFile = '.env';
 fs.access(settingsFile, fs.constants.F_OK | fs.constants.R_OK, (err) => {
   if (err) {
     console.error("Settings file '.env' is missing. See Readme file");
-    process.exit(1)
+    process.exit(1);
   } 
 });
 
@@ -79,10 +79,19 @@ const text_automated = "Automatiserad uppdatering";
 (async () => {
 
   const startTime = new Date().getTime()
-  const browser = await puppeteer.launch({
-    //headless: false,
-    executablePath: '/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome' // This must match your local installation of Chrome
-  });
+  let browser;
+  let browser_path = process.env.BrowserPath || '/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome';
+  // console.log("Browser path:", browser_path);
+  try {
+    browser = await puppeteer.launch({
+      //headless: false,
+      // Executable path must match your local installation of Chrome - configure your .env file accordingly
+      executablePath: browser_path 
+    });
+  } catch (e) {
+    console.error("Unable to launch browser!", e);
+    process.exit(1);
+  }
   const page = await browser.newPage();
   //page.on('console', msg => console.log("browser: " + msg.text())); // Works but much noise
   await page.setViewport({ width: 1200, height: 800 })
@@ -422,7 +431,7 @@ const text_automated = "Automatiserad uppdatering";
             helper.log("[!] Högre subvention än avgift: Avg. " + totalAmount + ", subv.: " + totalDiscount + ". Diff: " + (totalAmount - totalDiscount))
           }*/
 
-          let invoiceResult = await page.evaluate((text_discount_title, text_discount, totalDiscount, totalAmount, discountInfo, discountRowQuery) => {
+          let invoiceResult = await page.evaluate((text_discount_title, text_discount, totalDiscount, totalAmount, discountInfo, discountRowQuery) => { 
 
             //let dataItem = document.querySelector("#items tbody tr:last-child input")
             let dataItem = document.querySelector(discountRowQuery)
