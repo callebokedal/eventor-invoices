@@ -7,3 +7,8 @@ jmf
 reports
 utredningar
 emails
+files/**
+test/**
+
+# python virtualenv
+env/**
