@@ -10,5 +10,10 @@ emails
 files/**
 test/**
 
+Faktura-nnn.pdf
+invoice_x.pdf
+
 # python virtualenv
 env/**
+
+container/**

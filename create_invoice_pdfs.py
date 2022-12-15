@@ -12,7 +12,6 @@ from reportlab.platypus import Table, TableStyle
 
 """Create PDF files for all members"""
 
-
 today = date.today()
 
 parser = argparse.ArgumentParser()
@@ -142,7 +141,9 @@ print(df_out)
 
 #df_pdf = df[['id','item-id','amount','lateFee','status','item-invoiceDetails.e-mail','Person','Tävling','Klass','Ålder','OK?','Subvention %','Subvention','Att betala']]
 #df_out['Info'] = df_out.[:,('Tävling')].str.slice(0,30) + ' ' + df_out['Klass']
-df_out['Info'] = np.vectorize(get_info)(df_out['Tävling'],df_out['Klass'])
+
+df_final['Subvention'] = np.vectorize(calculate_discount_amount)(df_final['amount'],df_final['OK?'],df_final['Subvention %'])
+df_out['Info']         = np.vectorize(get_info)(df_out['Tävling'],df_out['Klass'])
 df_out['Subvention b'] = df_out['Subvention %'].apply(lambda x: str(x) + "%")
 data = df_out[['id','Info','amount','lateFee','status','Subvention %','Subvention','Att betala']].values.tolist()
 
