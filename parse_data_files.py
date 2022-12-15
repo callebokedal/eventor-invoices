@@ -1,7 +1,6 @@
 import re
 import json
 import argparse
-import datetime
 import pandas as pd
 import numpy as np
 from datetime import date
@@ -13,6 +12,7 @@ today = date.today()
 parser = argparse.ArgumentParser()
 parser.add_argument("data_file", type=str, help="File to read input from (JSON-lines with invoice data)")
 parser.add_argument("member_file", type=str, help="File with Member details exported from Eventor")
+parser.add_argument("out_file", type=str, help="File to save result to")
 args = parser.parse_args()
 
 def read_file(path, encoding='utf-8'):
@@ -51,7 +51,6 @@ def extract_person_name(text:str):
     - "Hyrbricka SportIdent för <name>" (name always at the end)
     
     """
-    #match = re.search(r"^Anmälan för (.*) i", text)
     # Catch pattern 1
     # Anmälan för <Name> i SM, sprint - D20 Kval B
     match = re.search(r"^Anmälan för ([a-zåäöé -]*?) i ", text, re.IGNORECASE)
@@ -80,39 +79,43 @@ assert extract_person_name("Anmälan för Ett Annat Namn, Göteborg-Majorna OK /
 
 def extract_competition(competition_details:str):
     """Remove class info from competition details"""
-    #match = re.search(r" - ([0-9a-zåäö ,#-]*)$", competition_details, re.IGNORECASE)
+
+    # Special case
+    if re.search(r"fältlunch|fältmåltid", competition_details, re.IGNORECASE) != None:
+        return competition_details
+
     res = re.split(" - ", competition_details)
-    #print(res)
-    #print("".join(res[:-1]))
-    return " - ".join(res[:-1])
-    #if match != None:
-    #    return competition_details.replace(match.group(0),"")
-    #return ""
+    return " - ".join(res[:-1]) if len(res) > 1 else competition_details
 
 assert extract_competition("Aleträffen - H40") == "Aleträffen"
 assert extract_competition("Snötrampen - Insk. 2 km") == "Snötrampen"
 assert extract_competition("Vårserien, #2 - Insk. 2 km") == "Vårserien, #2"
 assert extract_competition("Midsommarsprinten - Göteborg Syd - Röd") == "Midsommarsprinten - Göteborg Syd"
+assert extract_competition("Hyrbricka SportIdent för Ett Namn") == "Hyrbricka SportIdent för Ett Namn"
+assert extract_competition("1. Fältlunch - Pasta och köttfärsås (85 SEK) för Ett Namn") == "1. Fältlunch - Pasta och köttfärsås (85 SEK) för Ett Namn"
+
 
 def extract_class(competition_details:str):
     """Extract class info from competition details"""
+
+    # Special case
+    if re.search(r"fältlunch|fältmåltid", competition_details, re.IGNORECASE) != None:
+        return ""
+
     res = re.split(' - ', competition_details)
-    return str(res[-1])
+    return str(res[-1]) if len(res) > 1 else ""
 
 assert extract_class("Vårserien, #2 - Insk. 2 km") == "Insk. 2 km"
 assert extract_class("Aleträffen - H40") == "H40"
 assert extract_class("Midsommarsprinten - Göteborg Syd - Röd") == "Röd"
-
-#    match = re.search(r" - ([0-9a-zåäö ,#-]*)$", competition_details, re.IGNORECASE)
-#    if match != None:
-#        return match.group(1)
-#    return ""
+assert extract_class("Hyrbricka SportIdent för Ett Namn") == ""
+assert extract_class("1. Fältlunch - Pasta och köttfärsås (85 SEK) för Ett Namn") == ""
 
 def extract_competition_details(text:str):
     """Extract competition name"""
     valid_entry = re.search(r"^Anmälan för ", text, re.IGNORECASE) != None
     if not valid_entry:
-        return ""
+        return text.replace("Card Rental", "Hyrbricka SportIdent")
     
     name = extract_person_name(text)
     pattern = f"^Anmälan för {name} i "
@@ -121,10 +124,6 @@ def extract_competition_details(text:str):
         # Case 
         # Anmälan för <Name>, <Team name> i SM, sprint - D20 Kval B
         res = re.split(', ', text)
-        #print(text)
-        #print(res)
-        #print(res[1:])
-        #print(", ".join(res[1:]))
         return ", ".join(res[1:])
     return remaining
 
@@ -134,6 +133,9 @@ assert extract_competition_details("Anmälan för Ett Annat Namn, Sjövalla FK 1
 assert extract_competition_details("Anmälan för Ett Namn i Snötrampen - Insk. 2 km") == "Snötrampen - Insk. 2 km"
 assert extract_competition_details("Anmälan för Ett Namn i Vårserien, #2 - Insk. 2 km") == "Vårserien, #2 - Insk. 2 km"
 assert extract_competition_details("Anmälan för Ett Namn i Aleträffen - H40") == "Aleträffen - H40"
+assert extract_competition_details("Hyrbricka SportIdent för Ett Namn") == "Hyrbricka SportIdent för Ett Namn"
+assert extract_competition_details("Card Rental för Ett Namn") == "Hyrbricka SportIdent för Ett Namn"
+
 
 def valid_entry(text:str, status:str, competition:str):
     """Test if entry is valid or not. Not the same as valid for discount (but the first check)
@@ -154,8 +156,6 @@ def valid_entry(text:str, status:str, competition:str):
     if invalid_type:
         print(f"Not valid: {re.search(r'punch|card rental|hyrbricka| o-ringen|måltider|subvention', text, re.IGNORECASE)}")
         return False
-
-    # TODO: More cases to handle?
 
     return True
 
@@ -214,14 +214,12 @@ def calculate_amount_to_pay(amount, late_fee, valid:bool=False, discount:int=0) 
     amount = int(float(amount.replace(",","."))) if type(amount) == str else int(amount)
     late_fee = 0 if late_fee == "" else int(float(late_fee.replace(",","."))) if type(late_fee) == str else int(float(late_fee))
 
-    #print(f"calculate_amount_to_pay - amount: '{amount}', late fee: '{late_fee}', valid: '{valid}'")
     if not valid:
         return amount + late_fee
 
     if discount == 100:
         return late_fee
 
-    #return round(amount - (amount * (discount / 100))) + late_fee
     return amount - calculate_discount_amount(amount, valid, discount) + late_fee
 
 assert calculate_amount_to_pay(100, 30, False, 40) == 130
@@ -237,14 +235,8 @@ def calculate_age(birth_date:str):
     return today.year - int(str(birth_date)[0:4])
 
 # Action
-print(args.member_file)
-#df_members = pd.read_excel(args.member_file, engine='xlrd')
 df_members = pd.read_excel(args.member_file)
 invoices = parse_data(args.data_file)
-#print(invoices)
-
-#df = pd.read_json(json.dumps(invoices))
-#print(df.head(3))
 
 df_invoices = pd.json_normalize(invoices,
     record_path=['items'],
@@ -252,8 +244,6 @@ df_invoices = pd.json_normalize(invoices,
         ['invoiceDetails', 'e-mail'],
         ['invoiceDetails', 'invoiceNo']],
     meta_prefix='item-')
-#print(df_invoices.head(30))
-#print(df_invoices.info())
 
 # Add column for full name to be able to match invoice data frame from Eventor
 df_members['Namn'] = df_members['Förnamn'] + ' ' + df_members['Efternamn']
@@ -264,29 +254,190 @@ df_invoices['Person'] = df_invoices['text'].apply(extract_person_name)
 df_invoices['Tävlingsinfo'] = df_invoices['text'].apply(extract_competition_details)
 df_invoices['Tävling'] = df_invoices['Tävlingsinfo'].apply(extract_competition)
 df_invoices['Klass'] = df_invoices['Tävlingsinfo'].apply(extract_class)
-##df_invoices['Ålder'] = df_members['']
 
-#df_final = pd.merge(df_members[['Namn','E-postadress','Ålder']], df_invoices, left_on=['Namn','E-postadress'], right_on=['Person','item-invoiceDetails.e-mail'], validate='one_to_many')
+# Rearrange columns
+# From: "id", "text", "amount", "fee", "lateFee", "status", "item-batchId", "item-id", "item-invoiceDetails.e-mail", "item-invoiceDetails.invoiceNo", "Person", "Tävlingsinfo", "Tävling", "Klass"
+# To: "id", "text", "item-batchId", "item-id", "item-invoiceDetails.e-mail", "item-invoiceDetails.invoiceNo", "Person", "Tävlingsinfo", "Tävling", "Klass", "amount", "fee", "lateFee", "status"
+df_invoices = df_invoices[["id", "text", "item-batchId", "item-id", "item-invoiceDetails.e-mail", "item-invoiceDetails.invoiceNo", "Person", "Tävlingsinfo", "Tävling", "Klass", "amount", "fee", "lateFee", "status"]]
+
 df_final = pd.merge(df_invoices, df_members[['Namn','E-postadress','Ålder']], left_on=['Person','item-invoiceDetails.e-mail'], right_on=['Namn','E-postadress'], validate='many_to_one')
 df_final.drop(['Namn','E-postadress'], axis=1, inplace=True)
 
 df_final['OK?'] = np.vectorize(valid_entry)(df_final['text'],df_final['status'],df_final['Tävling']) 
-#def calculate_discount(valid:bool, status:str, text:str, competition:str, klass:str, age) -> float:
 df_final['Subvention %'] = np.vectorize(calculate_discount)(df_final['OK?'],df_final['status'],df_final['text'],df_final['Tävling'],df_final['Klass'],df_final['Ålder'])
 
-#def calculate_amount_to_pay(amount:int, late_fee:int, valid:bool, discount:int) -> int:
 df_final['Subvention'] = np.vectorize(calculate_discount_amount)(df_final['amount'],df_final['OK?'],df_final['Subvention %'])
 df_final['Att betala'] = np.vectorize(calculate_amount_to_pay)(df_final['amount'],df_final['lateFee'],df_final['OK?'],df_final['Subvention %'])
 
-#df_invoices['Aktivitet ok?'] = np.vectorize(valid_activity)(df_invoices['Tävling'],df_invoices['Klass']) 
-
-#print(df_invoices[['text','Person','item-id','item-invoiceDetails.invoiceNo']])
-
-print(df_final[['text','Tävling','OK?']].head(60))
-print(df_final[['text','Tävling','Ålder','Subvention %']].head(60))
+#print(df_final[['text','Tävling','OK?']].head(60))
+#print(df_final[['text','Tävling','Ålder','Subvention %']].head(60))
 
 df_final.drop('Tävlingsinfo', axis=1, inplace=True)
-df_final.to_excel("files/all_invoices.xlsx")
-#df_invoices[['text','item-id','item-invoiceDetails.invoiceNo']].to_excel("files/data.xlsx", engine='xlsxwriter')
+
+# Start building data for invoices
+#g1 = df_final.groupby(["item-batchId", "Person"])
+
+#df_test = df_final.loc[df_final['Person'] == "Fabian Alinder"]
+#df_test = df_final.loc[df_final['Person'] == "Per-Arne Wahlgren"]
+
+# Group by person
+#df_test = df_final.loc[df_final['item-batchId'] == 1033] # TODO: Just test - remove later
+df_test = df_final
+g = df_test[['Person','Subvention','Att betala']].groupby(["Person"])
+
+subvention = g['Subvention'].aggregate('sum')
+att_betala = g['Att betala'].aggregate('sum')
+
+# Object for storing money to pay per person
+invoices_data = {}
+
+# Loop all persons
+for idx, name in enumerate(df_test["Person"].unique()):
+    print(name)
+    print(f" - Subvention: {str(subvention.loc[name]).rjust(4, ' ')} kr")
+    print(f" - Att betala: {str(att_betala.loc[name]).rjust(4, ' ')} kr")
+    invoices_data[name] = {"name":name, "discount": subvention.loc[name], "total_amount": att_betala.loc[name], "invoiceNo": idx+1, "invoiceName": f"Faktura-{idx+1}.pdf"}
+
+#print(invoices_data)
+
+#print(f"  Subvention: {g['Subvention'].aggregate('sum').values}")
+#print(f"  Att betala: {g['Att betala'].aggregate('sum')}")
+
+#exit(0)
+
+#g1 = df_test.groupby(["Person"])
+#print(g1.head(100))
+#print(g1.groups)
+#print(f"Subvention: {g1['Subvention'].aggregate('sum').values[0]}")
+#print(f"Att betala: {g1['Att betala'].aggregate('sum').values[0]}")
+#pay_info = g1.aggregate({'Subvention':'sum', 'Att betala':'sum'}) # Works byt yeilds a multiindex result
+#print(f"Att betala: {pay_info[0]} {pay_info[1]}")
+
+def save_excel(df:pd.DataFrame, invoiceData, filename:str):
+    writer = pd.ExcelWriter(filename, engine='xlsxwriter')
+
+    # Convert the dataframe to an XlsxWriter Excel object. We also turn off the
+    # index column at the left of the output dataframe.
+    df.to_excel(writer, sheet_name='Aktivitetsöversikt', index=False)
+    pd.DataFrame({}).to_excel(writer, sheet_name='Fakturaöversikt', index=False)
+
+    # Get the xlsxwriter workbook and worksheet objects.
+    workbook  = writer.book
+    worksheet = writer.sheets['Aktivitetsöversikt']
+    worksheet2 = writer.sheets['Fakturaöversikt']
+
+    # Get the dimensions of the dataframe.
+    (max_row, max_col) = df.shape
+
+    # Make the columns wider for clarity.
+    worksheet.set_column(0,  max_col - 1, 12)
+
+    # Set the autofilter.
+    worksheet.autofilter(0, 0, max_row, max_col - 1)
+
+    # Add an optional filter criteria. The placeholder "Region" in the filter
+    # is ignored and can be any string that adds clarity to the expression.
+    #worksheet.filter_column(0, 'Region == East')
+
+    # It isn't enough to just apply the criteria. The rows that don't match
+    # must also be hidden. We use Pandas to figure our which rows to hide.
+    #for row_num in (df.index[(df['Region'] != 'East')].tolist()):
+    #    worksheet.set_row(row_num + 1, options={'hidden': True})
+
+    SEK = workbook.add_format({'num_format': '# ##0 kr'})
+    bold_format = workbook.add_format({'bold': True})
+    valid_format = workbook.add_format({'bg_color': '#C6EFCE'})
+    invalid_format = workbook.add_format({'bg_color': '#FFC7CE'})
+    eventor_format = workbook.add_format({'bg_color': '#F5D301'})
+    eventor_mix_format = workbook.add_format({'bg_color': '#F8E201'})
+    sfk_format = workbook.add_format({'bg_color': '#3F9049', 'font_color':'#FFFFFF'})
+
+    col_widths = [5, 50, 4, 6, 17, 5, 23, 24, 12, 11, 8, 6, 6, 6, 8, 6, 11, 11, 11, 11]
+    for i, w in enumerate(col_widths):
+        worksheet.set_column(i, i, w)
+
+    worksheet.set_column(0, 0, None, bold_format)
+    #worksheet.set_column(9, 9, None, SEK)
+
+    # Column colors
+    # OK?	Subvention %	Subvention	Att betala	Faktura status	Faktura betalad
+    worksheet.write('B1', 'Text', eventor_format)
+    worksheet.write('C1', 'BatchId', eventor_format)
+    worksheet.write('D1', 'E-id', eventor_format)
+    worksheet.write('E1', 'E-mail', eventor_format)
+    worksheet.write('F1', 'E-invoiceNo', eventor_format)
+    worksheet.write('G1', 'Person', eventor_format)
+    worksheet.write('H1', 'Event', eventor_mix_format)
+    worksheet.write('I1', 'Klass', eventor_mix_format)
+    worksheet.write('J1', 'amount', eventor_format)
+    worksheet.write('K1', 'fee', eventor_format)
+    worksheet.write('L1', 'lateFee', eventor_format)
+    worksheet.write('M1', 'status', eventor_format)
+    worksheet.write('N1', 'Ålder', eventor_format)
+    worksheet.write('O1', 'OK?', sfk_format)
+    worksheet.write('P1', '%', sfk_format)
+    worksheet.write('Q1', 'Subvention', sfk_format)
+    worksheet.write('R1', 'Att betala', sfk_format)
+    worksheet.write('S1', 'Faktura status', sfk_format)
+    worksheet.write('T1', 'Faktura betald', sfk_format)
+
+    worksheet.write_comment('B1', 'Underlag från Eventor (datum saknas tyvärr)')
+    worksheet.write_comment('J1', 'Avgift - enligt Eventor')
+    worksheet.write_comment('K1', 'Oklart - enligt Eventor. Ingnorerad då den sällan skiljer från "amount"')
+    worksheet.write_comment('L1', 'Avgift för efteranmälan (subventioneras inte)')
+    worksheet.write_comment('M1', 'Om "Ej start" eller inte')
+    worksheet.write_comment('O1', 'Om posten ska subventioneras eller inte givet SFK regler')
+    worksheet.write_comment('P1', 'Subvention i procent per post enligt SFK regler')
+    worksheet.write_comment('Q1', 'Eventuell subvention i kr per post enligt SFK regler')
+    worksheet.write_comment('R1', 'Att betala för post efter eventuell subvention enligt SFK regler')
+
+    # If discount if ok or not
+    worksheet.conditional_format(1, 14, max_row, 14, {'type':     'cell',
+                                        'criteria': '==',
+                                        'value':    'True',
+                                        'format':   valid_format})
+    worksheet.conditional_format(1, 14, max_row, 14, {'type':     'cell',
+                                        'criteria': '==',
+                                        'value':    'False',
+                                        'format':   invalid_format})
+
+    worksheet2.write('A1', 'Fakturanummer', sfk_format)
+    worksheet2.write('B1', 'Person', sfk_format)
+    worksheet2.write('C1', 'Subvention (kr)', sfk_format)
+    worksheet2.write('D1', 'Totalt att betala (kr)', sfk_format)
+    worksheet2.write('E1', 'Fakturanamn', sfk_format)
+    worksheet2.write_comment('C1', 'Summa subvention (som information) för aktuell person')
+    worksheet2.write_comment('D1', 'Total, subventionerad, summa att betala för aktuell person')
+    worksheet2.set_column(0, 0, 12)
+    worksheet2.set_column(1, 1, 22)
+    worksheet2.set_column(2, 2, 12)
+    worksheet2.set_column(3, 3, 16)
+    worksheet2.set_column(4, 4, 15)
+    idx = 0
+    for name in invoiceData:
+        #worksheet2.write()
+        #print(inv)
+        idx = idx + 1
+        worksheet2.write(idx, 0, invoiceData[name]['invoiceNo'])
+        worksheet2.write(idx, 1, invoiceData[name]['name'])
+        worksheet2.write(idx, 2, invoiceData[name]['discount'])
+        worksheet2.write(idx, 3, invoiceData[name]['total_amount'])
+        worksheet2.write(idx, 4, invoiceData[name]['invoiceName'])
+
+    #worksheet2.wrtie
+
+
+    # Close the Pandas Excel writer and output the Excel file.
+    #writer.save()
+    writer.close()
+
+df_final['Faktura status'] = ""
+df_final['Faktura betalad'] = ""
+
+if True:
+    ##df_final.to_excel(args.out_file, engine="openpyxl")
+    save_excel(df_final, invoices_data, args.out_file)
+    print(f"Save result to file: '{args.out_file}'")
+#df_final.to_excel("files/all_invoices2.xlsx", engine="xlsxwriter")
 
 

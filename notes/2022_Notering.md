@@ -7,9 +7,11 @@ Två fakturaperioder blir meckigt för alla.
 
 Ladda hem aktuella medlemmar
 OBS!
-Spara om filen som en modern xlsx-fil
+Spara om filen som en modern xlsx-fil:
 
-## Test
+  files/members_sjovalla_fk_2022.xlsx
+
+## Steg för steg
 
 - Skapa två fakturaperioder i Eventor
     - 2022 Period 1 	2022-01-02 	2022-07-30 	127 	172 	152 404,50 SEK -> 1033
@@ -36,7 +38,16 @@ grep batchId files/period_2_2022_1034.txt | wc -l -> 164
 python3 -m venv env
 
 source env/bin/activate
-python3 parse_data_files.py files/data_2022.txt
+python parse_data_files.py files/data_2022.txt files/members_sjovalla_fk_2022.xlsx
 
 # Leave virtualenv
 deactivate
+
+
+--------
+
+Utskick
+
+loop över betalande medlemmar:
+  echo "Dags att betala $MEDLEM_NAMN!" | mail -s "Årsavgift 2022"  $MEDLEM_EMAIL -A $MEDLEM_NAMN.pdf
+
