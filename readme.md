@@ -2,6 +2,8 @@
 Scripts to handle Invoice discounts in Eventor. Based on Node.js, (https://nodejs.org) and Puppeteer (https://developers.google.com/web/tools/puppeteer/).
 
 ## Installation
+
+### Node
 Prerequisites are ```nodejs``` and ```npm``` (https://www.npmjs.com/), along with ```git``` (https://git-scm.com/)
 
 ```bash
@@ -10,6 +12,16 @@ $ npm i puppeteer-core
 $ npm install
 # And also
 $ npm install dotenv
+```
+
+### Python
+```sh
+# Always activate virtual env first
+# source <your virtual environment directory>/bin/activate
+source venv/bin/activate
+pip install tabulate
+# Update installed libs
+pip freeze > requirements.txt
 ```
 
 ### Settings
@@ -182,7 +194,7 @@ För medlem som deltar aktivt i klubbens arbete som funktionär vid arrangemang,
 	- "hyrbricka" eller "punch card"
 	- Om "ej start"
 	- Ej O-Ringen (inte säker dessa är med på listorna)
-	- Räkna bort eventuell efteranälningsavgift från subvention
+	- Räkna bort eventuell efteranmälningsavgift från subvention (undantag Våreserie, DM, 25 manna)
 	- All händelser som inte startar med "Anmälan för <person>" (ex: "Camping")
 - Om <21 år 
 	- Om SM 			-> 100% rabatt
@@ -192,6 +204,26 @@ För medlem som deltar aktivt i klubbens arbete som funktionär vid arrangemang,
 	- Om "vårserien" 	-> 100% (oavsett ålder) 
 	- Om "veteran" 		-> 100% (då dessa betalas kontant på plats, oavsett ålder)
 - Övriga tävlingar 		-> 40% rabatt (oavsett ålder)
+
+## Regler författade 2022 (bättre/sämre än ovan?)
+
+Som medlem i Sjövalla Orientering får du subvention på tävlingar enligt följande regler!
+
+Regler för tävlingar som ger subvention (notera även undantagsregler nedan)
+- Medlem under 21 år får 100% subvention på normal anmälningsavgift (eventuell efteranmälningsavgift får man betala för själv)
+- Medlem från 21 år får 40% subvention på normal anmälningsavgift (eventuell efteranmälningsavgift får man betala för själv)
+- Är man med i en stafettävling med klubben subventioneras detta till 100% (exempel: 25-manna, DM-stafett)
+- Tävling i SM subventioneras till 100%
+- Vissa tävlingar betalas på plats vid tävling men dyker ändå upp i Eventor. Dessa försöker vi rensa bort genom att ge 100% subvention (exempel: Veterantävlingar, Skogsflickor)
+
+Undantag:
+- Om man ej startat i en tävling får man själv stå för hela kostnaden
+- Man får inte subvention för annat än anmälningar till tävling. Till exempel får man inte subvention på hyra av SportIdent-pinne, måltid på arenan eller liknande.
+- Tävling på O-Ringen subventioneras inte
+
+OBS! Underlag för avgifter kommer från Eventor. Ibland händer det att ansvariga klubbar fakturerat fel, ibland har det blivit fel i Eventor. Dessa fall försöker vi hantera på bästa och smidigaste sätt och hoppas på förståelse om det skulle bli fel någon gång. 
+
+Tanken med dessa subventioner är att hjälpa våra medlemmar att komma ut i skogen - inte minst gällande våra ungdomar!
 
 
 

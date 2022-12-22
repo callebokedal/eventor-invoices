@@ -10,6 +10,8 @@ emails
 files/**
 test/**
 
+_private/**
+
 Faktura-nnn.pdf
 invoice_x.pdf
 
