@@ -8,22 +8,19 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
-from reportlab.platypus import Table, TableStyle
+from reportlab.platypus import Table, TableStyle, Image
 from pythonlib.rotatedtext import verticalText
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, ParagraphAndImage
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.rl_config import defaultPageSize
 from reportlab.lib.units import cm, inch, mm
 from reportlab.lib.colors import Color, HexColor
+from reportlab.lib.enums import TA_RIGHT, TA_LEFT, TA_CENTER
+from reportlab.lib.styles import ParagraphStyle
 
 
 # https://stackoverflow.com/questions/13061545/rotated-document-with-reportlab-vertical-text
 from reportlab.graphics.shapes import Drawing, Group, String
-from reportlab.lib.enums import TA_CENTER
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfbase import pdfmetrics
 
 """Create PDF invoice"""
 
@@ -63,9 +60,11 @@ sfk_lines = [
 ]
 sfk_image = 'files/sfk_logo_small.png'
 sfk_text_image = 'files/sfk-ol-text.png'
+qr_image = 'files/qr_subventioner_invoice.png'
 sfk_contact = [
-    'Vid förfrågningar ang denna faktura kontakta',
-    'Per-Arne Wahlgren'
+    'Vid förfrågningar angående denna faktura, kontakta:',
+    '&nbsp;',
+    'Per-Arne Wahlgren',
     'Telefon: 0708-322148',
     'E-post: per-arne.wahlgren@telia.com'
 ]
@@ -234,6 +233,15 @@ def myLaterPages(canvas, doc):
     #canvas.drawString(cm, 0.75 * cm, f"Sida {doc.page} {canvas.getPageNumber()}")
     canvas.restoreState()
 
+def col(i):
+    """Calculate color to pair of altering rows"""
+    if i % 2 == 0:
+        row_idx = int(i/2)
+    else:
+        row_idx = int((i+1)/2)
+
+    return colors.white if row_idx % 2 == 1 else HexColor(0xF2F2F2)
+
 class SFKInvoice:
     def __init__(self, *args, **kwargs):
         self.filename = 'files/Faktura-exempel2.pdf'
@@ -244,6 +252,14 @@ class SFKInvoice:
             self.left_footer = kwargs['left_footer']
         else:
             self.left_footer = None
+        if 'footer' in kwargs:
+            self.footer = kwargs['footer']
+        else:
+            self.footer = None
+        if 'data' in kwargs:
+            self.data = kwargs['data']
+        else:
+            self.data = {}
         self.Story = []
 
     def onMyFirstPage(self, canvas, doc):
@@ -252,58 +268,51 @@ class SFKInvoice:
         if self.left_footer is not None:
             canvas.setFont('arimo', 8)
             canvas.drawString(1 * cm, 1 * cm, self.left_footer)
+        if self.footer is not None:
+            canvas.setFont('arimo', 8)
+            canvas.drawCentredString(width/2, 1*cm, self.footer)
             
         #print(f"total amount: {canvas.data}")
         canvas.saveState()
-        #data = canvas.data
-        canvas.drawInlineImage(sfk_image, 10, 785, width=48, height=48)
-        canvas.drawInlineImage(sfk_text_image, 65, 800, width=102, height=30)
-
-        canvas.setFont('arimo', 8)
-        #canvas.drawString(540, 820, f"Sida {1} av {2}")
+        # Logos
+        #canvas.drawInlineImage(sfk_image, 10, 785, width=48, height=48)
+        #canvas.drawInlineImage(sfk_text_image, 65, 800, width=102, height=30)
+        canvas.drawInlineImage(sfk_image, 40, 770, width=48, height=48)
+        canvas.drawInlineImage(sfk_text_image, 95, 785, width=102, height=30)
 
         canvas.setFont('arimo-bold', 26)
-        # setting the title of the document
         canvas.setTitle(title)
-
-        # creating the title by setting it's font 
-        # and putting it on the canvas
         canvas.drawCentredString(300, 770, title)
         
-        #canvas.setFont('Times-Bold',16)
         #canvas.drawCentredString(PAGE_WIDTH/2.0, PAGE_HEIGHT-108, document_title)
-        canvas.setFont('arimo',9)
-        #canvas.drawString(cm, 0.75 * cm, f"Sida {canvas.getPageNumber()}")
 
         canvas.setFont("arimo-bold", 12)
         canvas.drawString(40, 730, "Betalningsmottagare")
         canvas.setFont("arimo", 12)
         text = canvas.beginText(40, 715)
-        #text.setFont("Courier", 18)
-        #text.setFillColor(colors.red)
         for line in sfk_lines:
             text.textLine(line)
         canvas.drawText(text)
 
         # Kund
+        name = data["name"]
         canvas.setFont("arimo-bold", 12)
         canvas.drawString(390, 730, "Kund")
         canvas.setFont("arimo", 12)
-        #canvas.drawString(390, 715, "Ett Ganska Långt Namn")
-        canvas.drawString(390, 715, data["invoice"]["name"])
+        canvas.drawString(390, 715, name)
 
         invoice_date = today.isoformat()
         due_date = (today + timedelta(days=31)).isoformat()
         # print(f"Today: {invoice_date}. Due date: {due_date}") # Works
-        canvas.drawString(40, 645, f"Fakturadatum: {invoice_date}")
+        canvas.drawString(40, 637, f"Fakturadatum: {invoice_date}")
 
         # Invoice info
-        invoice_info = [["Köp", "Per-Arne Wahlgren"],
+        invoice_info = [["Köp", name],
             ["Organisation", "Sjövalla FK"],
             ["Bankgiro", "5617-2570"],
-            ["Summa att betala", "1 300 kr"],
-            ["Förfallodatum", due_date],
-            ["Fakturanummer", "123"]]
+            ["Summa att betala", f"{str(data['total_amount'])} kr"],
+            ["Förfallodatum", due_date + " (30 dagar)"],
+            ["Fakturanummer", str(data["invoice_no"])]]
         canvas.setFont("arimo-bold", 12)
         text = canvas.beginText(40, 615)
         text.textLines([lines[0] for lines in invoice_info], trim=1)
@@ -317,7 +326,8 @@ class SFKInvoice:
         canvas.drawText(text)
 
         canvas.setFont("arimo-bold", 14)
-        canvas.drawString(40, 515, "Specifikation")
+        #canvas.drawString(40, 515, "Specifikation")
+        canvas.drawCentredString(300, 510, "Specifikation")
 
         canvas.restoreState()
         canvas.restoreState()
@@ -328,65 +338,128 @@ class SFKInvoice:
         if self.left_footer is not None:
             canvas.setFont('arimo', 8)
             canvas.drawString(1 * cm, 1 * cm, self.left_footer)
+        if self.footer is not None:
+            canvas.setFont('arimo', 8)
+            canvas.drawCentredString(width/2, 1*cm, self.footer)
         canvas.restoreState()
 
     def generateReport(self, data):
+        print("Generation report")
         self.reportContent(data)
         self.doc.build(self.Story, canvasmaker=NumberedCanvas, 
                        onFirstPage=self.onMyFirstPage,
                        onLaterPages=self.onMyLaterPages)
 
     def reportContent(self, data):
-        styles = getSampleStyleSheet()
-        #styles.add(ParagraphStyle(name='Justify', alignment=TA_JUSTIFY))
-        #justify = styles['Justify']
-        txt = """
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
-        Maecenas tristique cursus enim at luctus. Proin tincidunt, 
-        arcu vitae mattis pretium, lorem eros semper lectus, 
-        venenatis luctus orci odio rhoncus nunc. Nam nulla arcu, 
-        hendrerit at lacinia eget, gravida aliquam quam. Mauris 
-        finibus ipsum at leo ullamcorper, ut faucibus est eleifend. 
-        Maecenas vehicula malesuada tempor. Nulla et augue a purus 
-        luctus tincidunt. Nam consectetur ut diam sit amet efficitur. 
-        Morbi a volutpat orci. Donec id ipsum ut quam hendrerit gravida. 
-        Nulla gravida, ante non euismod fermentum, metus nulla ullamcorper 
-        sem, ut feugiat ipsum felis sit amet lectus.
-        """
+        print("Report content")
+        """Creates PDF content"""
+        #styles = getSampleStyleSheet()
         #for i in range(15):
         #    self.Story.append(Paragraph(txt))
 
+        #pdf = SimpleDocTemplate("files/Faktura-exempel.pdf", data=d)
+        story = self.Story
+        story = [Spacer(1,10.5*cm)]
+        style = styles["Normal"]
+
+        #invoice = data
+        #print(f"invoice data: {invoice}")
+        invoice_date = today.isoformat()
+        due_date = (today + timedelta(days=30)).isoformat()
+
+        data3 = [['Id', 'Benämning', 'Antal', 'Status', 'Pris', 'Subvention', 'Belopp'],
+             ['1234', 'A Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
+             ['', '', '1', 'Ej start', '14 kr', '(40%) 140 kr', '0 kr']]
+
+        # Add Invoice specification as a table
+        t=Table(data3,colWidths=[None,8*cm, None],
+            style=[
+                    ('GRID',(0,0),(-1,-1),0.5,colors.grey),
+                    ('BACKGROUND',(0,0),(-1,0),HexColor(0x3f9049)),
+                    ('FONTNAME',(0,0),(-1,-1),'arimo'),
+                    ('TEXTCOLOR',(0,0),(-1,0),colors.white),
+                    ('ALIGN',(2,1),(3,-1),'CENTER'), # Antal, Ej start
+                    ('ALIGN',(4,1),(-1,-1),'RIGHT') # 
+                    ], repeatRows=1, spaceBefore=0.5*cm, spaceAfter=0.5*cm)
+
+        for i in range(1,len(data3)):
+            if i % 2 == 0:
+                idx = i + (i-1)
+                ts = TableStyle([
+                    #('SIZE',(0,i),9),
+                    ('SPAN',(0,i),(1,i)),
+                    ('BACKGROUND',(0,i),(-1,i), col(i))])
+            else:
+                ts = TableStyle([
+                    ('SPAN',(1,i),(-1,i)),
+                    ('BACKGROUND',(0,i),(-1,i), col(i))])
+            t.setStyle(ts)
+
+        story.append(t)
+
+        # Add summary to pay
+        #self.canvas.setFont("arimo-bold", 12)
+        # https://docs.reportlab.com/reportlab/userguide/ch6_paragraphs/
+        style.fontName = "arimo-bold"
+        style.alignment = TA_RIGHT
+        style.rightIndent = 1*cm
+        style.fontSize = 12
+        p = Paragraph(f"Summa att betala: {data['total_amount']} kr", style)
+        story.append(p)
+        story.append(Spacer(1, 0.5*cm))
+
+        style = ParagraphStyle(
+            name='Normal',
+            fontName='arimo',
+            fontSize=10,
+        )
+        p = Paragraph(f"Var god betala en faktura per person. Märk aktuell faktura med text: {data['invoice_no']} {data['name']}", style)
+        story.append(p)
+        p = Paragraph(f"Tack för hjälpen!", style)
+        story.append(p)
+
+        story.append(Spacer(1, 1*cm))
+
+        #style2 = styles["Normal2"]
+        #style.fontName = "arimo"
+        #style2.alignment = TA_LEFT
+        #style.rightIndent = 0
+        #style.fontSize = 10
+        for line in sfk_contact:
+            p = Paragraph(line, style)
+            story.append(p)
+
+        # Rules
+        story.append(Spacer(1,0.5*cm))
+        p = Paragraph("Information om subventioner: https://orientering.sjovalla.se/s/subventioner", style)
+        story.append(p)
+        story.append(Spacer(1,0.5*cm))
+        #story.append(Image(qr_image, 48, 48))
+        
+
+        # Set the story
+        self.Story = story
+
+
 data = {
-    "invoice_no": 123,
-    "invoice": {
-        "name": "Testare Testsson",
-        "rows": [
-            {"id":"1", "text":"Anmälan 1", "amount":345, "lateFee": 40, "%":100, "discount": 345},
-            {"id":"2", "text":"Anmälan 2", "amount":345, "lateFee": 40, "%":100, "discount": 345},
-            {"id":"3", "text":"Anmälan 3", "amount":345, "lateFee": 40, "%":100, "discount": 345},
-            {"id":"ref1", "text":"Justering #1", "amount":100},
-            {"id":"ref3", "text":"Justering #3", "amount":-200}
-        ],
-        "total_discount": 234,
-        "total_amount": 1234
-    }
+    "invoice_no": 777,
+    "name": "Testare Testsson",
+    "rows": [
+        {"id":"1", "text":"Anmälan 1", "amount":345, "lateFee": 40, "%":100, "discount": 345},
+        {"id":"2", "text":"Anmälan 2", "amount":345, "lateFee": 40, "%":100, "discount": 345},
+        {"id":"3", "text":"Anmälan 3", "amount":345, "lateFee": 40, "%":100, "discount": 345},
+        {"id":"ref1", "text":"Justering #1", "amount":100},
+        {"id":"ref3", "text":"Justering #3", "amount":-200}
+    ],
+    "total_discount": 234,
+    "total_amount": 1234
 }
 
 
-inv = SFKInvoice(left_footer="Testing")
+#inv = SFKInvoice(left_footer="Testing", data=data)
+inv = SFKInvoice(footer="Sjövalla Orientering - orientering.sjovalla.se", data=data)
 inv.generateReport(data=data)
 #exit(0)
-
-def col(i):
-    """Calculate color to pair of altering rows"""
-    if i % 2 == 0:
-        row_idx = int(i/2)
-    else:
-        row_idx = int((i+1)/2)
-
-    #print(f"[{i%2}] {str(i).rjust(2)} | {str(row_idx).rjust(2)} | {row_idx%2}")
-
-    return colors.white if row_idx % 2 == 1 else HexColor(0xF2F2F2)
 
 #for i in range(1,13):
 #    print(col(i))
@@ -492,7 +565,7 @@ def create_pdf(data:object):
 
     #print(f"data length: {len(data3)}")
 
-    bg = 'A'
+    #bg = 'A'
     for i in range(1,len(data3)):
         #idx = i + (i-1)
         #print(f"idx: {str(idx).rjust(2)}, i: {str(i).rjust(2)}, mod: {str(i % 2).rjust(1)} => {idx-1}-{idx}")
@@ -574,21 +647,21 @@ def create_pdf(data:object):
     #pdf.build(story, onFirstPage=myFirstPage, onLaterPages=myLaterPages, canvasmaker=NumberedCanvas(), data=data)
     #pdf.build(story, onFirstPage=myFirstPage, onLaterPages=myLaterPages, canvasmaker=NumberedCanvas)
 
-data = {
-    "invoice_no": 123,
-    "invoice": {
-        "name": "Testare Testsson",
-        "rows": [
-            {"id":"1", "text":"Anmälan 1", "amount":345, "lateFee": 40, "%":100, "discount": 345},
-            {"id":"2", "text":"Anmälan 2", "amount":345, "lateFee": 40, "%":100, "discount": 345},
-            {"id":"3", "text":"Anmälan 3", "amount":345, "lateFee": 40, "%":100, "discount": 345},
-            {"id":"ref1", "text":"Justering #1", "amount":100},
-            {"id":"ref3", "text":"Justering #3", "amount":-200}
-        ],
-        "total_discount": 234,
-        "total_amount": 1234
-    }
-}
+#data = {
+#    "invoice_no": 123,
+#    "invoice": {
+#        "name": "Testare Testsson",
+#        "rows": [
+#            {"id":"1", "text":"Anmälan 1", "amount":345, "lateFee": 40, "%":100, "discount": 345},
+#            {"id":"2", "text":"Anmälan 2", "amount":345, "lateFee": 40, "%":100, "discount": 345},
+#            {"id":"3", "text":"Anmälan 3", "amount":345, "lateFee": 40, "%":100, "discount": 345},
+#            {"id":"ref1", "text":"Justering #1", "amount":100},
+#            {"id":"ref3", "text":"Justering #3", "amount":-200}
+#        ],
+#        "total_discount": 234,
+#        "total_amount": 1234
+#    }
+#}
 
 #create_pdf(data)
 
