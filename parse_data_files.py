@@ -7,14 +7,6 @@ from datetime import date
 
 """Convert report files from Eventor/OL-molnet into usable data-files (invoice details)"""
 
-# Eventuella fel
-# Vissa stafetter - 10mila?
-# Claes Björkman blir fel. Efternmälningsavgiften ska han betala också (har lagt in 80 i justering manuellt nedan)
-# 430103	Anmälan för Claes Björkman i DM, medel, Göteborg - H50	1034	65149	claes@bjorkmanhem.se	23	Claes Björkman	DM, medel, Göteborg	H50	240	240	80	Ej start	51	FALSE	0	0	240	80	 
-# Även Ebbe, troligen 430425
-# Emelina
-# Johan Hjelmér
-
 today = date.today()
 
 parser = argparse.ArgumentParser()

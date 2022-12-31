@@ -12,7 +12,7 @@ args = parser.parse_args()
 dfa = pd.read_excel(args.data_file, na_filter=False)
 #print(df.head())
 
-df = dfa[["id","Text","BatchId","E-id","Person","Event","Klass","OK?"]]
+df = dfa[["id","Text","BatchId","E-id","Person","Event","Klass","OK?", "Subvention", "Att betala", "Justering"]]
 #print(dfm.head())
 
 # Skip Hyrbricka etc.
