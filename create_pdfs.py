@@ -1,11 +1,16 @@
-import argparse
+import os, argparse
 from datetime import date, datetime, timedelta
 from pythonlib.SFKInvoice import SFKInvoice
 import pandas as pd
+import time 
+from time import strftime
+
 
 """Create PDF files for all members"""
 
 #today = date.today()
+os.environ["TZ"] = "Europe/Stockholm"
+time.tzset()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("input_file", type=str, help="File with calculated invoice data")
@@ -19,6 +24,10 @@ def shorten_text(text:str):
     return text
 
 # Action
+# Remeber start time
+start_time = time.time()
+print(" Start ".center(80, "-"))
+
 xls = pd.ExcelFile(args.input_file)
 df1 = pd.read_excel(xls, 'Aktivitetsöversikt')
 df2 = pd.read_excel(xls, 'Fakturaöversikt')
@@ -35,23 +44,9 @@ df = pd.merge(df1,df2,on="Person", suffixes=("_a","_f"))
 g = df.groupby("Person")
 
 data = []
-#data.append[['1234', 'A Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', '']]
 
 # Loop all rows
 for index, rows in g:
-    #print(type(rows))
-    #print(rows.columns)
-    #print(type(rows["Person"]))
-    #for idx, value in rows.items():
-    #    print(value)
-    #print(rows["Person"])
-    #print("person namn:", rows["Person"].iloc[0])
-    #print("person E-invoiceNo:", rows["E-invoiceNo"].iloc[0])
-    #print("total_amount",  rows["Totalt att betala (kr)"].iloc[0])
-
-#    data3 = [['Id', 'Benämning', 'Antal', 'Status', 'Pris', 'Subvention', 'Belopp'],
-#            ['1234', 'A Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-#            ['', '', '1', 'Ej start', '14 kr', '(40%) 140 kr', '0 kr']]
     person = {
         "invoice_no": rows["Fakturanummer"].iloc[0],
         "name": rows["Person"].iloc[0],
@@ -62,10 +57,7 @@ for index, rows in g:
         "total_amount": rows["Totalt att betala (kr)"].iloc[0],
         "note": rows["Notering_f"].iloc[0]
     }
-    #print(person)
-#df1 Index(['id', 'Text', 'BatchId', 'E-id', 'E-mail', 'E-invoiceNo', 'Person',
-#       'Event', 'Klass', 'amount', 'fee', 'lateFee', 'status', 'Ålder', 'OK?',
-#       '%', 'Subvention', 'Att betala', 'Justering', 'Notering'],
+
     for idx, row in rows.iterrows():
         #print(row["id"])
         r = {"id":row["id"], 
@@ -90,5 +82,7 @@ for invoice in data:
     idx += 1
     if idx < 10000:
         inv = SFKInvoice(data=invoice)
-        print(invoice["invoice_no"], invoice["name"], invoice["total_amount"])
+        #print(invoice["invoice_no"], invoice["name"], invoice["total_amount"])
         
+print ("Tidsåtgång: " + str(round((time.time() - start_time),1)) + " s")
+print((" Klart (" + strftime("%Y-%m-%d %H:%M") + ") ").center(80, "-"))

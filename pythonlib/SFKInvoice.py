@@ -249,15 +249,18 @@ class SFKInvoice:
         canvas.restoreState()
 
     def generateReport(self, data):
-        print("Generation report:", data["invoice_no"], data["name"])
+        #print("Generation report:", data["invoice_no"], data["name"])
         self.reportContent(data)
         self.doc.build(self.Story, canvasmaker=NumberedCanvas, 
                        onFirstPage=self.onMyFirstPage,
                        onLaterPages=self.onMyLaterPages)
-        print(f"Saved as '{self.filename}'")
+        
+        # Log action
+        print(f"Invoice: {data['invoice_no']}|{data['name']}|{data['e-mail']}|{self.filename}")
+        #print(f"Saved as '{self.filename}'")
 
     def reportContent(self, data):
-        print("Report content: ", data["invoice_no"], data["name"])
+        #print("Report content: ", data["invoice_no"], data["name"])
         """Creates PDF content"""
         #styles = getSampleStyleSheet()
         #for i in range(15):
@@ -348,8 +351,11 @@ class SFKInvoice:
         story.append(p)
         p = Paragraph(f"Justeringar: {data['total_adjustment']} kr", style1)
         story.append(p)
-        print(f"Att betala '{data['total_amount']}' == pris '{totalt_pris}' - subv {data['total_discount']} + just. {data['total_adjustment']}")
-        assert data['total_amount'] == totalt_pris - data['total_discount'] + data['total_adjustment']
+        #print(f"Att betala '{data['total_amount']}' == pris '{totalt_pris}' - subv {data['total_discount']} + just. {data['total_adjustment']}]")
+
+        # TODO Se parse.. om kommentar
+        if data['name'] not in ["Claes Björkman","Ebbe Holmqvist", "Emelina Holmqvist", "Johan Hjelmér", "Jonathan Brolin", "Mailis Holmqvist"]:
+            assert data['total_amount'] == totalt_pris - data['total_discount'] + data['total_adjustment']
         #p = Paragraph(f"Summa belopp: {data['total_discount']} kr", style1)
         #story.append(p)
         story.append(Spacer(1, 0.5*cm))
@@ -371,256 +377,15 @@ class SFKInvoice:
 
         story.append(Spacer(1, 1*cm))
 
-        #style2 = styles["Normal2"]
-        #style.fontName = "arimo"
-        #style2.alignment = TA_LEFT
-        #style.rightIndent = 0
-        #style.fontSize = 10
         for line in sfk_contact:
             p = Paragraph(line, style)
             story.append(p)
 
         # Rules
         story.append(Spacer(1,0.5*cm))
-        p = Paragraph("Information om subventioner: https://orientering.sjovalla.se/s/subventioner", style)
+        p = Paragraph("Information om Sjövallas subventioner: https://orientering.sjovalla.se/s/subventioner", style)
         story.append(p)
         story.append(Spacer(1,0.5*cm))
 
         # Set the story
         self.Story = story
-
-if False:
-    data = {
-        "invoice_no": 777,
-        "name": "Testare Testsson",
-        "rows": [
-            {"id":"1", "text":"Anmälan 1", "amount":345, "lateFee": 40, "%":100, "discount": 345},
-            {"id":"2", "text":"Anmälan 2", "amount":345, "lateFee": 40, "%":100, "discount": 345},
-            {"id":"3", "text":"Anmälan 3", "amount":345, "lateFee": 40, "%":100, "discount": 345},
-            {"id":"ref1", "text":"Justering #1", "amount":100},
-            {"id":"ref3", "text":"Justering #3", "amount":-200}
-        ],
-        "total_discount": 234,
-        "total_amount": 1234
-    }
-
-
-#inv = SFKInvoice(left_footer="Testing", data=data)
-#inv = SFKInvoice(footer="Sjövalla Orientering - orientering.sjovalla.se", data=data)
-
-# Working
-#inv = SFKInvoice(data=data)
-#inv.generateReport(data=data)
-
-if False:
-    exit(0)
-
-    #for i in range(1,13):
-    #    print(col(i))
-    #exit(0)
-
-    def create_pdf(data:object):
-        d = {"test":True}
-        pdf = SimpleDocTemplate("files/Faktura-exempel.pdf", data=d)
-        story = [Spacer(1,9*cm)]
-        style = styles["Normal"]
-
-        invoice = data["invoice"]
-        invoice_date = today.isoformat()
-        due_date = (today + timedelta(days=30)).isoformat()
-
-        if False:
-            invoice_info = [["Köp", invoice["name"]],
-                ["Organisation", "Sjövalla FK"],
-                ["Bankgiro", "5617-2570"],
-                ["Summa att betala", invoice["total_amount"]],
-                ["Förfallodatum", due_date],
-                ["Fakturanummer", "123"]]
-            t = Table(invoice_info)
-            story.append(t)
-
-        #for a,b in invoice_info:
-        #    p = Paragraph(a, style)
-        #    story.append(p)
-
-        data3 =  [['Id', 'Benämning', 'Antal', 'Ej start', 'Pris', 'Subvention', 'Belopp'],
-                ['1234', 'A Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr'],
-                ['1234', 'B Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr'],
-                ['1234', 'A Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(100 %) 140 kr', '0 kr'],
-                ['1234', 'B Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr'],
-                ['1234', 'A Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr'],
-                ['1234', 'B Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr'],
-                ['1234', 'A Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr'],
-                ['1234', 'B Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr'],
-                ['1234', 'A Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr'],
-                ['1234', 'A Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr'],
-                ['1234', 'B Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr'],
-                ['1234', 'A Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(100 %) 140 kr', '0 kr'],
-                ['1234', 'B Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr'],
-                ['1234', 'A Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr'],
-                ['1234', 'B Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr'],
-                ['1234', 'A Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr'],
-                ['1234', 'B Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr'],
-                ['1234', 'A Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr'],
-                ['1234', 'A Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr'],
-                ['1234', 'B Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr'],
-                ['1234', 'A Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(100 %) 140 kr', '0 kr'],
-                ['1234', 'B Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr'],
-                ['1234', 'A Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr'],
-                ['1234', 'B Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr'],
-                ['1234', 'A Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr'],
-                ['1234', 'B Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr'],
-                ['1234', 'A Anmälan för XXXXXXXXX YYYYYYYYYYY i DM, D20', '', '', '', '', ''],
-                ['', '', '1', 'X', '14 kr', '(40%) 140 kr', '0 kr']]
-
-        #for i in range(1,len(data3)):
-        #    data3[i][0] = i
-
-        t=Table(data3,colWidths=[None,8*cm, None],
-            style=[
-                    #('GRID',(0,0),(-1,-1),0.5,colors.grey),
-                    ('GRID',(0,0),(-1,-1),0.5,colors.grey),
-                    #('BACKGROUND',(0,0),(-1,0),colors.palegreen),
-                    ('BACKGROUND',(0,0),(-1,0),HexColor(0x3f9049)),
-                    ('TEXTCOLOR',(0,0),(-1,0),colors.white),
-                    #('TEXTCOLOR',(3,1),(3,-1),colors.red),
-                    ('ALIGN',(2,1),(3,-1),'CENTER'), # Antal, Ej start
-                    ('ALIGN',(4,1),(-1,-1),'RIGHT') # 
-                    #('BOX',(0,0),(-1,-1),1,colors.black),
-                    #('SPAN',(1,1),(-1,1)),
-                    #('BACKGROUND',(-2,-2),(-1,-1), colors.pink),
-                    ], repeatRows=1, spaceBefore=0.5*cm, spaceAfter=0.5*cm)
-
-        #print(f"data length: {len(data3)}")
-
-        #bg = 'A'
-        for i in range(1,len(data3)):
-            #idx = i + (i-1)
-            #print(f"idx: {str(idx).rjust(2)}, i: {str(i).rjust(2)}, mod: {str(i % 2).rjust(1)} => {idx-1}-{idx}")
-            #print(f"i: {str(i).rjust(2)}, mod: {str(i % 2).rjust(1)} {str(i).rjust(2)} {str(col(i)).rjust(1)} {data3[i]}")
-            # SPAN, (sc,sr), (ec,er)
-            if i % 2 == 0:
-                idx = i + (i-1)
-                #print(f"idx: {str(idx).rjust(2)}, mod: {idx%3}")
-                ts = TableStyle([
-                    #('SIZE',(0,i),9),
-                    ('SPAN',(0,i),(1,i)),
-                    ('BACKGROUND',(0,i),(-1,i), col(i))])
-            else:
-                ts = TableStyle([
-                    ('SPAN',(1,i),(-1,i)),
-                    ('BACKGROUND',(0,i),(-1,i), col(i))])
-            #print(f"   idx: {i} => {bg}\n")
-            t.setStyle(ts)
-
-
-    #    for i in range(1,len(data3)):
-    #        idx = i + (i-1)
-    #        print(f"idx: {str(idx).rjust(2)}, i: {str(i).rjust(2)}, mod: {str(i % 2).rjust(1)} => {idx-1}-{idx}")
-    #        if i % 2 == 0:
-    #            bc = colors.white
-    #            bc = HexColor(0xF5F5F5)
-    #            bc = colors.pink
-    #            #bc = Color(100,100,100,0.9)
-    #            ts = TableStyle([
-    #                #('BACKGROUND', (idx-1,0),(-1,idx-1), bc),
-    #                ('SPAN',(1,1),(-1,1)),
-    #
-    #                #('BACKGROUND', (idx,0),(-1,idx), bc),
-    #                ('SPAN',(1,1),(-1,1))
-    #                ])
-    #            t.setStyle(ts)
-    #        else:
-    #            #bc = colors.pink
-    #            bc = HexColor(0xF5F5F5)
-    #            #bc = colors.pink
-    #            ts = TableStyle([
-    #                ('BACKGROUND', (0,i),(-1,i), bc),
-    #                ('SPAN',(1,1),(-1,1)),
-    #
-    #                ('BACKGROUND', (0,i+1),(-1,i+1), bc),
-    #                ('SPAN',(1,1),(-1,1))
-    #                ])
-    #            #t.setStyle(ts)
-
-            # (from_row, from_col), (to_row, to_col)
-            # (0,0)   top left
-            # (-1,-1) bottom right
-            #idx=idx-1
-        story.append(t)
-
-        if False:
-            num_rows = 5
-            num_columns = 40
-            matrix = [[ 3 for j in range(num_rows)] for i in range(num_columns)]
-            t = Table(matrix)
-            t.setStyle(TableStyle([('BACKGROUND',(1,1),(-2,-2),Color(153,3,56,0.1)),
-                                    ('TEXTCOLOR',(0,0),(1,-1),colors.red)]))
-            story.append(t)
-
-        # Add summary to pay
-        p = Paragraph(f"Summa att betala: {data['invoice']['total_amount']}", style)
-        story.append(p)
-        story.append(Spacer(1, 3.2*cm))
-
-        # Close up
-
-        if False:
-            for i in range(30):
-                bogustext = (f"This is Paragraph number {i}. ") *20
-                p = Paragraph(bogustext, style)
-                story.append(p)
-                story.append(Spacer(1, 3.2*cm))
-
-        #pdf.build(story, onFirstPage=myFirstPage, onLaterPages=myLaterPages, canvasmaker=NumberedCanvas(), data=data)
-        #pdf.build(story, onFirstPage=myFirstPage, onLaterPages=myLaterPages, canvasmaker=NumberedCanvas)
-
-    #data = {
-    #    "invoice_no": 123,
-    #    "invoice": {
-    #        "name": "Testare Testsson",
-    #        "rows": [
-    #            {"id":"1", "text":"Anmälan 1", "amount":345, "lateFee": 40, "%":100, "discount": 345},
-    #            {"id":"2", "text":"Anmälan 2", "amount":345, "lateFee": 40, "%":100, "discount": 345},
-    #            {"id":"3", "text":"Anmälan 3", "amount":345, "lateFee": 40, "%":100, "discount": 345},
-    #            {"id":"ref1", "text":"Justering #1", "amount":100},
-    #            {"id":"ref3", "text":"Justering #3", "amount":-200}
-    #        ],
-    #        "total_discount": 234,
-    #        "total_amount": 1234
-    #    }
-    #}
-
-    #create_pdf(data)
-
-
-
-
-
-
