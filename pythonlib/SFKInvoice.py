@@ -143,7 +143,8 @@ def col(i):
     return colors.white if row_idx % 2 == 1 else HexColor(0xF2F2F2)
 
 class SFKInvoice:
-    def __init__(self, *args, **kwargs):
+    #def __init__(self, *args, **kwargs):
+    def __init__(self, export_dir, **kwargs):
         if 'left_footer' in kwargs:
             self.left_footer = kwargs['left_footer']
         else:
@@ -154,10 +155,10 @@ class SFKInvoice:
             self.footer = "Sjövalla Orientering - orientering.sjovalla.se"
         if 'data' in kwargs:
             self.data = kwargs['data']
-            self.filename = f"files/pdfs/Faktura-{self.data['invoice_no']}.pdf"
+            self.filename = f"{export_dir}Faktura-{self.data['invoice_no']}.pdf"
         else:
             self.data = {}
-            self.filename = f"files/pfds/Faktura-exempel.pdf"
+            self.filename = f"{export_dir}Faktura-exempel.pdf"
         
         self.doc = SimpleDocTemplate(self.filename, pagesize=A4,
                                      topMargin = 1 * cm, bottomMargin = 2 * cm,
