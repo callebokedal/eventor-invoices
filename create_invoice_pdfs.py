@@ -50,7 +50,10 @@ def test():
 
 #test()
 
-"""Create PDF files for all members"""
+"""Create PDF files for all members
+
+OBSOLETE - NOT USED
+"""
 
 today = date.today()
 

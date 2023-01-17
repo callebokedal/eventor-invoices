@@ -6,7 +6,12 @@ import time
 from time import strftime
 
 
-"""Create PDF files for all members"""
+"""Create PDF files for all members
+
+Usage:
+python3 create_pdfs.py files/Fakturor_2022_v3_paw.xlsx files/pdfs_v3_paw/
+
+"""
 
 #today = date.today()
 os.environ["TZ"] = "Europe/Stockholm"
@@ -14,7 +19,7 @@ time.tzset()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("input_file", type=str, help="File with calculated invoice data")
-#parser.add_argument("export_directory", type=str, help="Directory to save result to")
+parser.add_argument("export_directory", type=str, help="Directory to save result to")
 args = parser.parse_args()
 
 def shorten_text(text:str):
@@ -48,7 +53,7 @@ data = []
 # Loop all rows
 for index, rows in g:
     person = {
-        "invoice_no": rows["Fakturanummer"].iloc[0],
+        "invoice_no": int(rows["Fakturanummer"].iloc[0]),
         "name": rows["Person"].iloc[0],
         "e-mail": rows["E-mail"].iloc[0],
         "rows": [],
@@ -81,7 +86,7 @@ idx = 0
 for invoice in data:
     idx += 1
     if idx < 10000:
-        inv = SFKInvoice(data=invoice)
+        inv = SFKInvoice(args.export_directory, data=invoice)
         #print(invoice["invoice_no"], invoice["name"], invoice["total_amount"])
         
 print ("Tidsåtgång: " + str(round((time.time() - start_time),1)) + " s")
