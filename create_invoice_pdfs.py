@@ -89,8 +89,8 @@ sfkLines = [
     '435 41 Mölnlycke',
     'Sverige'
 ]
-sfk_image = 'files/sfk_logo_small.png'
-sfk_ol_image = 'files/sfk-ol-text.png'
+sfk_image = 'static_files/sfk_logo_small.png'
+sfk_ol_image = 'static_files/sfk-ol-text.png'
 
 # creating a pdf object
 pdf = canvas.Canvas(fileName, pagesize=A4)
@@ -98,10 +98,10 @@ pdf = canvas.Canvas(fileName, pagesize=A4)
 width, height = A4
 
 # registering a external font in python
-pdfmetrics.registerFont(TTFont('arimo', 'files/fonts/Arimo-Regular.ttf'))
-pdfmetrics.registerFont(TTFont('arimo-bold', 'files/fonts/Arimo-Bold.ttf'))
-pdfmetrics.registerFont(TTFont('martel', 'files/fonts/MartelSans-Regular.ttf'))
-pdfmetrics.registerFont(TTFont('martel-bold', 'files/fonts/MartelSans-Bold.ttf'))
+pdfmetrics.registerFont(TTFont('arimo', 'static_files/fonts/Arimo-Regular.ttf'))
+pdfmetrics.registerFont(TTFont('arimo-bold', 'static_files/fonts/Arimo-Bold.ttf'))
+pdfmetrics.registerFont(TTFont('martel', 'static_files/fonts/MartelSans-Regular.ttf'))
+pdfmetrics.registerFont(TTFont('martel-bold', 'static_files/fonts/MartelSans-Bold.ttf'))
 
 
 # drawing a image at the 
