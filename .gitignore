@@ -19,5 +19,7 @@ log_invoices_*
 
 # python virtualenv
 env/**
+.venv/**
+.DS_Store
 
 container/**

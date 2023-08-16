@@ -1,15 +1,15 @@
 import os, argparse
 from datetime import date, datetime, timedelta
 from pythonlib.SFKInvoice import SFKInvoice
-import pandas as pd
+import pandas as pd # type: ignore
 import time 
 from time import strftime
-
 
 """Create PDF files for all members
 
 Usage:
-python3 create_pdfs.py files/Fakturor_2022_v3_paw.xlsx files/pdfs_v3_paw/
+$ source .venv/bin/activate
+(.venv) $ python3 create_pdfs.py files/
 
 """
 
@@ -33,9 +33,14 @@ def shorten_text(text:str):
 start_time = time.time()
 print(" Start ".center(80, "-"))
 
-xls = pd.ExcelFile(args.input_file)
-df1 = pd.read_excel(xls, 'Aktivitetsöversikt')
-df2 = pd.read_excel(xls, 'Fakturaöversikt')
+#xls = pd.ExcelFile(args.input_file, engine="openpyxl")
+#df1 = pd.read_excel(xls, 'Aktivitetsöversikt')
+#df2 = pd.read_excel(xls, 'Fakturaöversikt')
+
+# Note! Sheest cannot be 'protected'! Then values for forumlas will be 0 and not actual value.
+# Make sure to unprotect first
+df = pd.read_excel(args.input_file, ['Aktivitetsöversikt','Fakturaöversikt'])
+#df1, df2 = pd.read_excel(args.input_file, ['Aktivitetsöversikt','Fakturaöversikt'])
 #df1 Index(['id', 'Text', 'BatchId', 'E-id', 'E-mail', 'E-invoiceNo', 'Person',
 #       'Event', 'Klass', 'amount', 'fee', 'lateFee', 'status', 'Ålder', 'OK?',
 #       '%', 'Subvention', 'Att betala', 'Justering', 'Notering'],
@@ -45,8 +50,13 @@ df2 = pd.read_excel(xls, 'Fakturaöversikt')
 #       'Faktura betald', 'Notering'],
 #      dtype='object')
 
+df1 = df['Aktivitetsöversikt']
+df2 = df['Fakturaöversikt']
+
 df = pd.merge(df1,df2,on="Person", suffixes=("_a","_f"))
 g = df.groupby("Person")
+
+#print("df g: ", g.head())
 
 data = []
 
@@ -77,7 +87,7 @@ for index, rows in g:
             "note": row["Notering_a"]}
         person["rows"].append(r)
     data.append(person)
-    #print(person)
+    # print(person) # 230815: Seems ok!
     #for row in rows:
     #    print(row)
 

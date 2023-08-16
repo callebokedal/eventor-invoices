@@ -155,7 +155,7 @@ def valid_entry(text:str, status:str, competition:str):
     
     invalid_type = re.search(r"punch|card rental|hyrbricka| o-ringen|måltider|subvention|fältlunch", text, re.IGNORECASE) != None
     if invalid_type:
-        print(f"Not valid: {re.search(r'punch|card rental|hyrbricka| o-ringen|måltider|subvention|fältlunch', text, re.IGNORECASE)}")
+        #print(f"Not valid: {re.search(r'punch|card rental|hyrbricka| o-ringen|måltider|subvention|fältlunch', text, re.IGNORECASE)}")
         return False
 
     return True
@@ -265,6 +265,14 @@ assert calculate_discount_amount("100", "50", "En stafett-tävling", 25, True, 1
 assert calculate_discount_amount("500,40", "250,20", "Sjövalla FK 1 i 25manna", 25, True, 100, "Person") == 750
 
 # 2022-12-13 'amount' and 'fee' is in very few cases different, but seems like we can ignore 'fee'
+# df_final['amount'],
+# df_final['lateFee'],
+# df_final['Tävling'],
+# df_final['Ålder'],
+# df_final['Subv.?'],
+# df_final['Subvention %'],
+# df_final['Person'],
+# df_final['Justering']
 def calculate_amount_to_pay(amount, late_fee, competition:str, age, valid:bool, discount, person, adjustment) -> int:
     """Total amount to pay, including potential discount
     
@@ -283,8 +291,14 @@ def calculate_amount_to_pay(amount, late_fee, competition:str, age, valid:bool, 
         return late_fee - lateFeeDiscount + adjustment
 
     to_pay = amount + late_fee - calculate_discount_amount(amount, late_fee, competition, age, valid, discount, person) + adjustment
+
+    if "Axel H" in person:
+        print(f"Att betala:  {to_pay}")
     return to_pay
 
+print("Check assertment!!!!")
+assert calculate_amount_to_pay(70, 70, "Våreserien 3", 7, False, 0, "Axel", 0) == 140 # Varför visar filen då 70?
+print("No problem???")
 assert calculate_amount_to_pay(100, 30, "En tävling", 16, False, 40, "Person", 0) == 130
 assert calculate_amount_to_pay(100, 0,  "En tävling", 16, False, 40, "Person", 0) == 100
 assert calculate_amount_to_pay(0,   50, "En tävling", 16, False, 100, "Person", 0) == 50
@@ -305,8 +319,10 @@ def calculate_age(birth_date:str):
     return today.year - int(str(birth_date)[0:4])
 
 # Action
-log("Start creating Excel for invoices")
-df_members = pd.read_excel(args.member_file)
+log(f"Start creating Excel for invoices")
+log(f"Members from: {args.member_file}")
+df_members = pd.read_excel(args.member_file, engine="xlrd") # Remember to save file in 97-2004 format first
+#df_members = pd.read_excel(args.member_file, engine="openpyxl") # Works for 2022 file, but not 2023 (only tested when 2023 file was an XML file)
 invoices = parse_data(args.data_file)
 
 df_invoices = pd.json_normalize(invoices,
@@ -338,11 +354,20 @@ df_final.drop(['Namn','E-postadress'], axis=1, inplace=True)
 df_final['Justering'] = 0
 df_final['Notering'] = " "
 
-df_final['OK?'] = np.vectorize(valid_entry)(df_final['text'],df_final['status'],df_final['Tävling']) 
-df_final['Subvention %'] = np.vectorize(calculate_discount)(df_final['OK?'],df_final['status'],df_final['text'],df_final['Tävling'],df_final['Klass'],df_final['Ålder'])
+df_final['Subv.?'] = np.vectorize(valid_entry)(df_final['text'],df_final['status'],df_final['Tävling']) 
+df_final['Subvention %'] = np.vectorize(calculate_discount)(df_final['Subv.?'],df_final['status'],df_final['text'],df_final['Tävling'],df_final['Klass'],df_final['Ålder'])
 
-df_final['Subvention'] = np.vectorize(calculate_discount_amount)(df_final['amount'],df_final['lateFee'],df_final['Tävling'],df_final['Ålder'],df_final['OK?'],df_final['Subvention %'],df_final['Person'])
-df_final['Att betala'] = np.vectorize(calculate_amount_to_pay)(df_final['amount'],df_final['lateFee'],df_final['Tävling'],df_final['Ålder'],df_final['OK?'],df_final['Subvention %'],df_final['Person'],df_final['Justering'])
+df_final['Subvention'] = np.vectorize(calculate_discount_amount)(df_final['amount'],df_final['lateFee'],df_final['Tävling'],df_final['Ålder'],df_final['Subv.?'],df_final['Subvention %'],df_final['Person'])
+df_final['Att betala'] = np.vectorize(calculate_amount_to_pay) (df_final['amount'],
+                                                                df_final['lateFee'],
+                                                                df_final['Tävling'],
+                                                                df_final['Ålder'],
+                                                                df_final['Subv.?'],
+                                                                df_final['Subvention %'],
+                                                                df_final['Person'],
+                                                                df_final['Justering'])
+
+print("Att betala", df_final['Att betala'])
 
 df_final.drop('Tävlingsinfo', axis=1, inplace=True)
 
@@ -352,7 +377,7 @@ old_cols = df_final.columns.values
 #exit(0)
 new_cols= ['id', 'text', 'item-batchId', 'item-id', 'item-invoiceDetails.e-mail',
     'item-invoiceDetails.invoiceNo', 'Person', 'Tävling', 'Klass', 'amount', 'fee',
-    'lateFee', 'status', 'Ålder', 'OK?', 'Subvention %',
+    'lateFee', 'status', 'Ålder', 'Subv.?', 'Subvention %',
     'Subvention', 'Att betala', 'Justering', 'Notering']
 df_final = df_final.reindex(columns=new_cols)
 
@@ -430,7 +455,7 @@ def save_excel(df:pd.DataFrame, invoiceData, filename:str):
     worksheet.write('L1', 'lateFee', eventor_format)
     worksheet.write('M1', 'status', eventor_format)
     worksheet.write('N1', 'Ålder', eventor_format)
-    worksheet.write('O1', 'OK?', sfk_format)
+    worksheet.write('O1', 'Subv.?', sfk_format)
     worksheet.write('P1', '%', sfk_format)
     worksheet.write('Q1', 'Subvention', sfk_format)
     worksheet.write('R1', 'Att betala', sfk_format)

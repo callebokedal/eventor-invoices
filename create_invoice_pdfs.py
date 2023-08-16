@@ -1,21 +1,27 @@
 import argparse
 from datetime import date, datetime, timedelta
-import pandas as pd
-import numpy as np
-from reportlab.pdfgen import canvas
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfbase import pdfmetrics
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import cm
-from reportlab.platypus import Table, TableStyle
+import pandas as pd # pyright: ignore[reportMissingModuleSource]
+import numpy as np # pyright: ignore
+from reportlab.pdfgen import canvas  # pyright: ignore
+from reportlab.pdfbase.ttfonts import TTFont  # pyright: ignore
+from reportlab.pdfbase import pdfmetrics  # pyright: ignore
+from reportlab.lib import colors  # pyright: ignore
+from reportlab.lib.pagesizes import A4  # pyright: ignore
+from reportlab.lib.units import cm  # pyright: ignore
+from reportlab.platypus import Table, TableStyle  # pyright: ignore
 from pythonlib.rotatedtext import verticalText
 
 # https://stackoverflow.com/questions/13061545/rotated-document-with-reportlab-vertical-text
-from reportlab.graphics.shapes import Drawing, Group, String
-from reportlab.lib.enums import TA_CENTER
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph
+from reportlab.graphics.shapes import Drawing, Group, String  # pyright: ignore
+from reportlab.lib.enums import TA_CENTER  # pyright: ignore
+from reportlab.lib.styles import getSampleStyleSheet  # pyright: ignore
+from reportlab.platypus import SimpleDocTemplate, Paragraph  # pyright: ignore
+
+"""
+
+OBSOLETE - NOT TO BE USED
+
+"""
 
 style = getSampleStyleSheet()
 normal = style["Normal"]
