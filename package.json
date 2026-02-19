@@ -6,11 +6,11 @@
   "main": "sfk_fakturor.js",
   "dependencies": {
     "dotenv": "^8.2.0",
-    "puppeteer-core": "^1.20.0",
+    "puppeteer-core": "^24.37.5",
     "yargs": "^14.2.0"
   },
   "devDependencies": {
-    "jasmine": "^3.5.0"
+    "jasmine": "^3.6.1"
   },
   "scripts": {
     "start": "node sfk_fakturor.js",
